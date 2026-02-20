@@ -1,8 +1,10 @@
 # Supamachine
 
-An opinionated, deterministic auth state machine for Supabase apps.
+> Warning: under active development
 
-This is an early-stage library focused on providing **strong invariants** around Supabase authentication, suitable for Expo and web apps.
+A deterministic authentication state machine for Supabase web and mobile apps.
+
+This is an early-stage library designed to make authentication easier and way less error-prone, especially as your app grows in complexity.
 
 ## Overview
 

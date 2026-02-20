@@ -1,38 +1,113 @@
-import React, { createContext, useContext, useEffect, useRef, useState } from 'react'
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react'
 import { SupamachineCore } from '../core/runtime'
 import { attachSupabase } from '../supabase/adapter'
 import { AuthState } from '../core/states'
-import { SupabaseClient } from '@supabase/supabase-js'
+import { AuthEventType } from '../core/constants'
+import type { SupabaseClient } from '@supabase/supabase-js'
+import type {
+  LoadContext,
+  DeriveAppState,
+  InitializeApp,
+  ContextUpdater,
+  AppState,
+} from '../core/types'
+import { parseLogLevel, LogLevel } from '../core/logger'
 
-const SupamachineContext = createContext<AuthState | null>(null)
+export type SupamachineOptions = {
+  getSessionTimeoutMs?: number
+  loadContextTimeoutMs?: number
+  initializeAppTimeoutMs?: number
+  /** 'none' | 'error' | 'warn' | 'info' | 'debug'. Default: 'warn'. Uses [Supamachine][subsystem] format. */
+  logLevel?: 'none' | 'error' | 'warn' | 'info' | 'debug'
+}
+
+export interface SupamachineContextValue {
+  coreState: AuthState
+  appState: AppState
+}
+
+const SupamachineContext = createContext<SupamachineContextValue | null>(null)
 
 export function SupamachineProvider({
   supabase,
-  loadProfile,
+  loadContext,
+  deriveAppState,
+  initializeApp,
+  contextUpdaters,
   children,
+  options,
 }: {
   supabase: SupabaseClient
-  loadProfile: (userId: string) => Promise<unknown>
+  loadContext: LoadContext
+  deriveAppState?: DeriveAppState
+  initializeApp?: InitializeApp
+  contextUpdaters?: ContextUpdater[]
   children: React.ReactNode
+  options?: SupamachineOptions
 }) {
   const coreRef = useRef<SupamachineCore | null>(null)
+  const [contextValue, setContextValue] =
+    useState<SupamachineContextValue | null>(null)
+
+  const logLevel =
+    typeof options?.logLevel === 'string'
+      ? parseLogLevel(options.logLevel)
+      : options?.logLevel ?? LogLevel.WARN
 
   if (!coreRef.current) {
-    coreRef.current = new SupamachineCore(loadProfile)
-    attachSupabase(coreRef.current, supabase)
-    coreRef.current.dispatch({ type: 'START' })
+    coreRef.current = new SupamachineCore(
+      loadContext,
+      deriveAppState,
+      initializeApp,
+      {
+        loadContextTimeoutMs: options?.loadContextTimeoutMs,
+        initializeAppTimeoutMs: options?.initializeAppTimeoutMs,
+        logLevel,
+      }
+    )
+    coreRef.current.setContextUpdaters(contextUpdaters ?? [])
+    attachSupabase(coreRef.current, supabase, {
+      getSessionTimeoutMs: options?.getSessionTimeoutMs,
+      logLevel,
+    })
+    coreRef.current.dispatch({ type: AuthEventType.START })
+
+    setContextValue({
+      coreState: coreRef.current.getSnapshot(),
+      appState: coreRef.current.getAppState(),
+    })
   }
 
-  const [state, setState] = useState<AuthState>(
-    coreRef.current.getSnapshot()
-  )
-
   useEffect(() => {
-    return coreRef.current!.subscribe(setState)
+    const unsubscribe = coreRef.current!.subscribe(
+      (coreState: AuthState, appState: AppState) => {
+        setContextValue({ coreState, appState })
+      }
+    )
+    return () => {
+      unsubscribe()
+    }
   }, [])
 
+  useEffect(() => {
+    if (coreRef.current) {
+      coreRef.current.setContextUpdaters(contextUpdaters ?? [])
+      coreRef.current.updateContext()
+    }
+  }, [contextUpdaters])
+
+  if (!contextValue) {
+    return null
+  }
+
   return (
-    <SupamachineContext.Provider value={state}>
+    <SupamachineContext.Provider value={contextValue}>
       {children}
     </SupamachineContext.Provider>
   )
