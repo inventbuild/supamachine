@@ -13,5 +13,5 @@
     "allowSyntheticDefaultImports": true
   },
   "include": ["src"],
-  "exclude": ["examples"]
+  "exclude": ["examples", "tests"]
 }

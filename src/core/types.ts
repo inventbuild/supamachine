@@ -21,12 +21,29 @@ type CustomStateConstraint = {
   status: Exclude<string, DisallowedStatuses>;
 };
 
-/** When D is void (default), returns CoreState. When D is custom states, returns Exclude<CoreState, AUTH_READY> | D */
+/** mapState is only called when we have context. Custom states inherit guaranteed context. */
+type WithSessionContext<C, T> = T extends { status: string }
+  ? T & { session: Session; context: C }
+  : never;
+
+/** Snapshot passed to mapState. Context is guaranteed—mapState only runs when we have context to derive from. */
+export type MapStateSnapshot<C> = {
+  status: typeof AuthStateStatus.AUTH_READY;
+  session: Session;
+  context: C;
+};
+
+/** When D is void (default), returns CoreState. When D is custom states, returns core states | (D with session+context added) */
 export type AppState<C, D = void> = [D] extends [void]
   ? CoreState<C>
-  : Exclude<CoreState<C>, { status: typeof AuthStateStatus.AUTH_READY }> | D;
+  :
+      | Exclude<CoreState<C>, { status: typeof AuthStateStatus.AUTH_READY }>
+      | WithSessionContext<C, D>;
 
-export interface SupamachineProviderProps<C, D extends CustomStateConstraint | void = void> {
+export interface SupamachineProviderProps<
+  C,
+  D extends CustomStateConstraint | void = void,
+> {
   loadContext?: (session: Session) => Promise<C>;
   initializeApp?: (snapshot: {
     session: Session;
@@ -34,16 +51,14 @@ export interface SupamachineProviderProps<C, D extends CustomStateConstraint | v
   }) => void | Promise<void>;
   mapState?: [D] extends [void]
     ? never
-    : (
-        snapshot: Extract<
-          CoreState<C>,
-          { status: typeof AuthStateStatus.AUTH_READY }
-        >,
-      ) => D;
+    : (snapshot: MapStateSnapshot<C>) => D;
   children: React.ReactNode;
 }
 
-export type UseSupamachineReturn<C, D extends CustomStateConstraint | void = void> = {
+export type UseSupamachineReturn<
+  C,
+  D extends CustomStateConstraint | void = void,
+> = {
   state: AppState<C, D>;
   updateContext: (updater: (current: C) => C | Promise<C>) => Promise<void>;
 };

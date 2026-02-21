@@ -10,6 +10,8 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "prepublishOnly": "npm run build"
   },
   "peerDependencies": {
@@ -20,7 +22,8 @@
     "@supabase/supabase-js": "^2.0.0",
     "@types/react": "^18.0.0",
     "prettier": "^3.8.1",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "vitest": "^4.0.18"
   },
   "dependencies": {
     "@inventbuild/supamachine": "link:../../Library/pnpm/global/5/node_modules/@inventbuild/supamachine",

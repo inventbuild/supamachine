@@ -19,10 +19,10 @@ type MyContext = {
 };
 
 type MyAppState =
-  | { status: "NEEDS_VERIFICATION"; session: Session; context: MyContext }
-  | { status: "NEEDS_PASSWORD"; session: Session; context: MyContext }
-  | { status: "NEEDS_ONBOARDING"; session: Session; context: MyContext }
-  | { status: "MAIN_APP"; session: Session; context: MyContext };
+  | { status: "NEEDS_VERIFICATION" }
+  | { status: "NEEDS_PASSWORD" }
+  | { status: "NEEDS_ONBOARDING" }
+  | { status: "APP_READY" };
 
 async function loadContext(session: Session): Promise<MyContext> {
   const { data, error } = await supabase
@@ -31,39 +31,32 @@ async function loadContext(session: Session): Promise<MyContext> {
     .eq("id", session.user.id)
     .single();
   if (error) throw error;
-  return { userData: data ?? {} };
+
+  const stored =
+    typeof localStorage !== "undefined"
+      ? localStorage.getItem("someLocalState")
+      : null;
+  const { emailVerified, passwordSet, onboardingComplete } = (
+    stored ? JSON.parse(stored) : {}
+  ) as Partial<MyContext["userData"]>;
+
+  return {
+    userData: { ...data, emailVerified, passwordSet, onboardingComplete },
+  };
 }
 
 function mapState(snapshot: {
   status: typeof AuthStateStatus.AUTH_READY;
   session: Session;
-  context: MyContext | null;
+  context: MyContext;
 }): MyAppState {
-  const ctx = snapshot.context ?? { userData: {} };
+  const ctx = snapshot.context;
   const { emailVerified, passwordSet, onboardingComplete } = ctx.userData ?? {};
 
-  if (!emailVerified) {
-    return {
-      status: "NEEDS_VERIFICATION",
-      session: snapshot.session,
-      context: ctx,
-    };
-  }
-  if (!passwordSet) {
-    return {
-      status: "NEEDS_PASSWORD",
-      session: snapshot.session,
-      context: ctx,
-    };
-  }
-  if (!onboardingComplete) {
-    return {
-      status: "NEEDS_ONBOARDING",
-      session: snapshot.session,
-      context: ctx,
-    };
-  }
-  return { status: "MAIN_APP", session: snapshot.session, context: ctx };
+  if (!emailVerified) return { status: "NEEDS_VERIFICATION" };
+  if (!passwordSet) return { status: "NEEDS_PASSWORD" };
+  if (!onboardingComplete) return { status: "NEEDS_ONBOARDING" };
+  return { status: "APP_READY" };
 }
 
 function AuthSwitch() {
@@ -81,18 +74,14 @@ function AuthSwitch() {
       return <SetPassword />;
     case "NEEDS_ONBOARDING":
       return <Onboarding state={state} />;
-    case "MAIN_APP":
+    case "APP_READY":
       return <Home session={state.session} />;
     default:
       return <Loading />;
   }
 }
 
-function Onboarding({
-  state,
-}: {
-  state: { status: "NEEDS_ONBOARDING"; session: Session; context: MyContext };
-}) {
+function Onboarding({ state }: { state: { status: "NEEDS_ONBOARDING" } }) {
   const { updateContext } = useSupamachine<MyContext, MyAppState>();
 
   const complete = () => {

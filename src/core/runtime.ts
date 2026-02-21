@@ -3,7 +3,7 @@ import type { CoreState } from "./states";
 import type { AuthEvent } from "./events";
 import { AuthEventType, AuthStateStatus } from "./constants";
 import { reducer, setReducerLogLevel } from "./reducer";
-import type { AppState } from "./types";
+import type { AppState, MapStateSnapshot } from "./types";
 import { createLogger, type LogLevel } from "./logger";
 
 const DEFAULT_LOAD_CONTEXT_TIMEOUT_MS = 10_000;
@@ -11,12 +11,7 @@ const DEFAULT_INITIALIZE_APP_TIMEOUT_MS = 30_000;
 
 export interface RuntimeOptions<C, D> {
   loadContext?: (session: Session) => Promise<C>;
-  mapState?: (
-    snapshot: Extract<
-      CoreState<C>,
-      { status: typeof AuthStateStatus.AUTH_READY }
-    >,
-  ) => D;
+  mapState?: (snapshot: MapStateSnapshot<C>) => D;
   initializeApp?: (snapshot: {
     session: Session;
     context: C;
@@ -33,8 +28,18 @@ function computeAppState<C, D>(
   if (state.status !== AuthStateStatus.AUTH_READY) {
     return state as AppState<C, D>;
   }
-  if (mapState) {
-    return mapState(state) as AppState<C, D>;
+  if (mapState && state.context != null) {
+    const snapshot: MapStateSnapshot<C> = {
+      status: state.status,
+      session: state.session,
+      context: state.context,
+    };
+    const base = mapState(snapshot);
+    return {
+      ...base,
+      session: state.session,
+      context: state.context,
+    } as AppState<C, D>;
   }
   return state as AppState<C, D>;
 }
