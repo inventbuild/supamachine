@@ -1,59 +1,65 @@
-import { AuthState } from "./states";
-import { AuthEvent } from "./events";
+import type { Session } from "@supabase/supabase-js";
+import type { CoreState } from "./states";
+import type { AuthEvent } from "./events";
 import { AuthEventType, AuthStateStatus } from "./constants";
 import { reducer, setReducerLogLevel } from "./reducer";
-import type {
-  LoadContext,
-  MapState,
-  InitializeApp,
-  ContextUpdater,
-  AppState,
-  AppContext,
-  SessionLike,
-} from "./types";
+import type { AppState } from "./types";
 import { createLogger, type LogLevel } from "./logger";
 
 const DEFAULT_LOAD_CONTEXT_TIMEOUT_MS = 10_000;
 const DEFAULT_INITIALIZE_APP_TIMEOUT_MS = 30_000;
 
-function computeAppState(
-  state: AuthState,
-  mapState: MapState | undefined,
-): AppState {
-  return mapState ? mapState(state, state.context) : (state.status as AppState);
+export interface RuntimeOptions<C, D> {
+  loadContext?: (session: Session) => Promise<C>;
+  mapState?: (
+    snapshot: Extract<
+      CoreState<C>,
+      { status: typeof AuthStateStatus.AUTH_READY }
+    >,
+  ) => D;
+  initializeApp?: (snapshot: {
+    session: Session;
+    context: C;
+  }) => void | Promise<void>;
+  loadContextTimeoutMs?: number;
+  initializeAppTimeoutMs?: number;
+  logLevel?: LogLevel;
 }
 
-export class SupamachineCore {
-  private state: AuthState = { status: AuthStateStatus.START, context: null };
+function computeAppState<C, D>(
+  state: CoreState<C>,
+  mapState: RuntimeOptions<C, D>["mapState"],
+): AppState<C, D> {
+  if (state.status !== AuthStateStatus.AUTH_READY) {
+    return state as AppState<C, D>;
+  }
+  if (mapState) {
+    return mapState(state) as AppState<C, D>;
+  }
+  return state as AppState<C, D>;
+}
+
+export class SupamachineCore<C, D> {
+  private state: CoreState<C> = {
+    status: AuthStateStatus.START,
+    context: null,
+  };
+  private sessionForLoading: Session | null = null;
   private listeners = new Set<
-    (coreState: AuthState, appState: AppState) => void
+    (coreState: CoreState<C>, appState: AppState<C, D>) => void
   >();
-  private contextUpdaters: ContextUpdater[] = [];
   private loadContextTimeoutMs: number;
   private initializeAppTimeoutMs: number;
   private log: ReturnType<typeof createLogger>;
 
-  constructor(
-    private readonly loadContext: LoadContext,
-    private readonly mapState?: MapState,
-    private readonly initializeApp?: InitializeApp,
-    options?: {
-      loadContextTimeoutMs?: number;
-      initializeAppTimeoutMs?: number;
-      logLevel?: LogLevel;
-    },
-  ) {
+  constructor(private readonly options: RuntimeOptions<C, D>) {
     this.loadContextTimeoutMs =
-      options?.loadContextTimeoutMs ?? DEFAULT_LOAD_CONTEXT_TIMEOUT_MS;
+      options.loadContextTimeoutMs ?? DEFAULT_LOAD_CONTEXT_TIMEOUT_MS;
     this.initializeAppTimeoutMs =
-      options?.initializeAppTimeoutMs ?? DEFAULT_INITIALIZE_APP_TIMEOUT_MS;
-    const level = options?.logLevel ?? 2;
+      options.initializeAppTimeoutMs ?? DEFAULT_INITIALIZE_APP_TIMEOUT_MS;
+    const level = options.logLevel ?? 2;
     this.log = createLogger("core", level);
     setReducerLogLevel(level);
-  }
-
-  setContextUpdaters(updaters: ContextUpdater[]) {
-    this.contextUpdaters = updaters;
   }
 
   setLogLevel(level: LogLevel) {
@@ -61,53 +67,72 @@ export class SupamachineCore {
     setReducerLogLevel(level);
   }
 
-  async updateContext() {
+  async updateContext(updater: (current: C) => C | Promise<C>): Promise<void> {
     if (this.state.status !== AuthStateStatus.AUTH_READY) {
       return;
     }
-
-    let updatedContext: AppContext | null = this.state.context;
-    for (const updater of this.contextUpdaters) {
-      if (updatedContext != null) {
-        const result = await updater(this.state, updatedContext);
-        updatedContext = result;
-      }
+    const current = this.state.context;
+    if (current == null) {
+      return;
     }
-
-    if (updatedContext !== this.state.context) {
-      this.log.debug("context changed, reloading");
-      await this.loadContextWithTimeout(this.state.session);
+    const next = await updater(current);
+    if (next !== current) {
+      this.state = { ...this.state, context: next };
+      this.emit();
     }
   }
 
-  dispatch(event: AuthEvent) {
+  dispatch(event: AuthEvent<C>) {
     const prevState = this.state;
     this.state = reducer(this.state, event);
+
+    if (event.type === AuthEventType.AUTH_RESOLVED && event.session) {
+      this.sessionForLoading = event.session;
+    } else if (event.type === AuthEventType.AUTH_CHANGED && event.session) {
+      this.sessionForLoading = event.session;
+    } else if (
+      event.type === AuthEventType.AUTH_RESOLVED ||
+      event.type === AuthEventType.AUTH_CHANGED
+    ) {
+      this.sessionForLoading = null;
+    }
 
     this.emit();
 
     if (
-      this.state.status === AuthStateStatus.SIGNED_IN &&
-      prevState.status !== AuthStateStatus.SIGNED_IN
+      this.state.status === AuthStateStatus.CONTEXT_LOADING &&
+      prevState.status !== AuthStateStatus.CONTEXT_LOADING
     ) {
-      this.log.debug("transitioned to SIGNED_IN, loading context");
-      this.loadContextWithTimeout(this.state.session);
+      const session = this.sessionForLoading;
+      if (session && this.options.loadContext) {
+        this.log.debug("entered CONTEXT_LOADING, loading context");
+        this.loadContextWithTimeout(session);
+      } else if (session && !this.options.loadContext) {
+        this.log.debug("no loadContext, resolving with empty context");
+        this.dispatch({
+          type: AuthEventType.CONTEXT_RESOLVED,
+          context: {} as C,
+        });
+      }
     } else if (
       this.state.status === AuthStateStatus.SIGNED_OUT &&
       prevState.status !== AuthStateStatus.SIGNED_OUT
     ) {
-      this.log.debug("transitioned to SIGNED_OUT, loading context");
-      this.loadContextWithTimeout(null);
+      this.sessionForLoading = null;
+      this.log.debug("signed out");
     } else if (
-      this.state.status === AuthStateStatus.AUTH_READY &&
-      prevState.status !== AuthStateStatus.AUTH_READY
+      this.state.status === AuthStateStatus.INITIALIZING &&
+      prevState.status === AuthStateStatus.CONTEXT_LOADING
     ) {
-      this.log.debug("transitioned to AUTH_READY, running initializeApp");
+      this.log.debug("entered INITIALIZING, running initializeApp");
       this.initializeAppWithTimeout();
     }
   }
 
-  private async loadContextWithTimeout(session: SessionLike | null) {
+  private async loadContextWithTimeout(session: Session) {
+    const loadContext = this.options.loadContext;
+    if (!loadContext) return;
+
     const timeoutPromise = new Promise<never>((_, reject) =>
       setTimeout(
         () => reject(new Error("loadContext timeout")),
@@ -116,35 +141,31 @@ export class SupamachineCore {
     );
 
     try {
-      const result = await Promise.race([
-        this.loadContext(session),
+      const context = await Promise.race([
+        loadContext(session),
         timeoutPromise,
       ]);
 
       this.dispatch({
-        type: AuthEventType.CONTEXT_LOADED,
-        userData: result.userData ?? null,
-        context: (result.context ?? {}) as AppContext,
+        type: AuthEventType.CONTEXT_RESOLVED,
+        context,
       });
     } catch (error) {
       this.log.error("loadContext failed", error);
-      if (this.state.status === AuthStateStatus.SIGNED_IN) {
-        this.dispatch({
-          type: AuthEventType.ERROR_CONTEXT,
-          error: error instanceof Error ? error : new Error(String(error)),
-        });
-      }
+      this.dispatch({
+        type: AuthEventType.ERROR_CONTEXT,
+        error: error instanceof Error ? error : new Error(String(error)),
+      });
     }
   }
 
   private async initializeAppWithTimeout() {
-    if (
-      !this.initializeApp ||
-      this.state.status !== AuthStateStatus.AUTH_READY
-    ) {
+    const { initializeApp } = this.options;
+    if (!initializeApp || this.state.status !== AuthStateStatus.INITIALIZING) {
       return;
     }
 
+    const { session, context } = this.state;
     const timeoutPromise = new Promise<never>((_, reject) =>
       setTimeout(
         () => reject(new Error("initializeApp timeout")),
@@ -153,35 +174,32 @@ export class SupamachineCore {
     );
 
     try {
-      await Promise.race([
-        this.initializeApp({
-          session: this.state.session,
-          user: this.state.user,
-          userData: this.state.userData,
-          context: this.state.context,
-        }),
-        timeoutPromise,
-      ]);
+      await Promise.race([initializeApp({ session, context }), timeoutPromise]);
+      this.dispatch({ type: AuthEventType.INITIALIZED });
     } catch (error) {
       this.log.error("initializeApp failed", error);
+      this.dispatch({
+        type: AuthEventType.ERROR_INITIALIZING,
+        error: error instanceof Error ? error : new Error(String(error)),
+      });
     }
   }
 
-  subscribe(fn: (coreState: AuthState, appState: AppState) => void) {
+  subscribe(fn: (coreState: CoreState<C>, appState: AppState<C, D>) => void) {
     this.listeners.add(fn);
     return () => this.listeners.delete(fn);
   }
 
-  getSnapshot() {
+  getSnapshot(): CoreState<C> {
     return this.state;
   }
 
-  getAppState(): AppState {
-    return computeAppState(this.state, this.mapState);
+  getAppState(): AppState<C, D> {
+    return computeAppState(this.state, this.options.mapState);
   }
 
   private emit() {
-    const appState = computeAppState(this.state, this.mapState);
+    const appState = computeAppState(this.state, this.options.mapState);
     for (const l of this.listeners) l(this.state, appState);
   }
 }

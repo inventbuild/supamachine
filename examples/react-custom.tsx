@@ -1,94 +1,119 @@
-// This example demonstrates Supamachine with your own custom app states.
+// This example demonstrates Supamachine with custom app states.
 // @ts-nocheck
 
-import { SupamachineProvider, useSupamachine } from "supamachine/react";
-import type { AuthState } from "supamachine";
-import { supabase } from "./supabaseClient";
+import {
+  SupamachineProvider,
+  useSupamachine,
+  AuthStateStatus,
+} from "supamachine";
 import type { Session } from "@supabase/supabase-js";
+import { supabase } from "./supabaseClient";
 
-// Your custom app states
-type AppState =
-  | AuthState
-  | { status: "NEEDS_VERIFICATION"; context: null }
-  | { status: "NEEDS_PASSWORD"; context: null }
-  | { status: "NEEDS_ONBOARDING"; context: null }
-  | { status: "APP_READY"; context: null };
+type MyContext = {
+  userData: {
+    emailVerified?: boolean;
+    passwordSet?: boolean;
+    onboardingComplete?: boolean;
+    name?: string;
+    email?: string;
+  };
+};
 
-async function loadContext(session: Session): Promise<LoadContextResult> {
-  if (!session) return undefined;
+type MyAppState =
+  | { status: "NEEDS_VERIFICATION" }
+  | { status: "NEEDS_PASSWORD" }
+  | { status: "NEEDS_ONBOARDING" }
+  | { status: "MAIN_APP" };
 
-  // Fetch profile
+async function loadContext(session: Session): Promise<MyContext> {
   const { data, error } = await supabase
     .from("profiles")
     .select("*")
-    .eq("id", session?.user.id)
+    .eq("id", session.user.id)
     .single();
-  if (error) {
-    throw error;
-  }
-
-  return {
-    user: data,
-  };
+  if (error) throw error;
+  return { userData: data ?? {} };
 }
 
-function mapState(
-  coreState: AuthState,
-  context: AppContext,
-  userData: UserData,
-): AppState {
-  const { emailVerified, passwordSet, onboardingComplete } = context ?? {};
+function mapState(snapshot: {
+  status: typeof AuthStateStatus.AUTH_READY;
+  session: Session;
+  context: MyContext | null;
+}): MyAppState {
+  const ctx = snapshot.context ?? { userData: {} };
+  const { emailVerified, passwordSet, onboardingComplete } = ctx.userData ?? {};
 
-  switch (coreState.status) {
-    case "SIGNED_IN":
-      if (!userData?.emailVerified) {
-        return { status: "NEEDS_VERIFICATION", context: context };
-      }
-      if (!userData?.passwordSet) {
-        return { status: "NEEDS_PASSWORD", context: context };
-      }
-      if (!userData?.onboardingComplete) {
-        return { status: "NEEDS_ONBOARDING", context: context };
-      }
-      return { status: "APP_READY", context: context };
-
-    default:
-      return coreState;
+  if (!emailVerified) {
+    return {
+      status: "NEEDS_VERIFICATION",
+      session: snapshot.session,
+      context: ctx,
+    };
   }
+  if (!passwordSet) {
+    return {
+      status: "NEEDS_PASSWORD",
+      session: snapshot.session,
+      context: ctx,
+    };
+  }
+  if (!onboardingComplete) {
+    return {
+      status: "NEEDS_ONBOARDING",
+      session: snapshot.session,
+      context: ctx,
+    };
+  }
+  return { status: "MAIN_APP", session: snapshot.session, context: ctx };
 }
 
 function AuthSwitch() {
-  const { state } = useSupamachine(); // state: AppState
+  const { state } = useSupamachine<MyContext, MyAppState>();
 
   switch (state.status) {
-    case "CHECKING":
+    case AuthStateStatus.CHECKING:
+    case AuthStateStatus.CONTEXT_LOADING:
       return <Loading />;
-
-    case "SIGNED_OUT":
+    case AuthStateStatus.SIGNED_OUT:
       return <Login />;
-
-    // Note that we don't handle "SIGNED_OUT" because it's replaced in mapState()
-
-    case "UNVERIFIED":
+    case "NEEDS_VERIFICATION":
       return <VerifyEmail />;
-
-    case "NO_PASSWORD":
+    case "NEEDS_PASSWORD":
       return <SetPassword />;
-
-    case "ONBOARDING":
-      return <Onboarding />;
-
-    case "READY":
-      return <Home user={state.user} />;
-
+    case "NEEDS_ONBOARDING":
+      return <Onboarding state={state} />;
+    case "MAIN_APP":
+      return <Home session={state.session} />;
     default:
-      return null;
+      return <Loading />;
   }
+}
+
+function Onboarding({
+  state,
+}: {
+  state: { status: "NEEDS_ONBOARDING"; session: Session; context: MyContext };
+}) {
+  const { updateContext } = useSupamachine<MyContext, MyAppState>();
+
+  const complete = () => {
+    updateContext((ctx) => ({
+      ...ctx,
+      userData: { ...ctx.userData, onboardingComplete: true },
+    }));
+  };
+
+  return (
+    <div>
+      Onboarding
+      <button onClick={complete}>Complete</button>
+    </div>
+  );
 }
 
 export function App() {
   return (
-    <SupamachineProvider<AppState>
+    <SupamachineProvider<MyContext, MyAppState>
       supabase={supabase}
       loadContext={loadContext}
       mapState={mapState}
@@ -96,4 +121,20 @@ export function App() {
       <AuthSwitch />
     </SupamachineProvider>
   );
+}
+
+function Loading() {
+  return <div>Loading...</div>;
+}
+function Login() {
+  return <div>Login</div>;
+}
+function VerifyEmail() {
+  return <div>Verify your email</div>;
+}
+function SetPassword() {
+  return <div>Set your password</div>;
+}
+function Home({ session }: { session: Session }) {
+  return <div>Home: {session.user.email}</div>;
 }

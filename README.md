@@ -14,7 +14,6 @@ Does this kind of auth code look familiar to you?
 const {
   data: { subscription },
 } = supabase.auth.onAuthStateChange((event, session) => {
-  // Sync only: update state immediately so UI can render
   if (event === "INITIAL_SESSION" || event === "TOKEN_REFRESHED") {
     setLoading(false);
   }
@@ -29,40 +28,73 @@ const {
 
 **THERE'S GOT TO BE A BETTER WAY!**
 
-Now there is.
-
-I was looking at my Supabase `AuthContext.tsx` in a client project and thought, "This should be a state machine." That night—and I'm not making this up—I actually dreamt about how I'd structure it. And here it is!
+Supamachine models auth as an explicit state machine with clear states (CHECKING, SIGNED_OUT, CONTEXT_LOADING, INITIALIZING, AUTH_READY, plus error states) and allows you to derive custom app states via `mapState`.
 
 ## Usage
 
 `pnpm add @inventbuild/supamachine`
 
-### Expo
+### Basic setup
 
-In your Expo `app/_layout.tsx`:
+```tsx
+import { SupamachineProvider, useSupamachine, AuthStateStatus } from "@inventbuild/supamachine";
 
-```
-import { SupamachineProvider } from '@inventbuild/supamachine`;
-
-...
+type MyContext = { userData: { name: string } };
+type MyAppState = { status: "MAIN_APP"; session: Session; context: MyContext };
 
 return (
-  <SupamachineProvider
+  <SupamachineProvider<MyContext, MyAppState>
     supabase={supabase}
-    loadProfile={loadProfile}
+    loadContext={async (session) => {
+      const { data } = await supabase.from("profiles").select("*").eq("id", session.user.id).single();
+      return { userData: data };
+    }}
+    mapState={(snapshot) => ({
+      status: "MAIN_APP",
+      session: snapshot.session,
+      context: snapshot.context!,
+    })}
   >
     <App />
   </SupamachineProvider>
-)
+);
 
+function App() {
+  const { state, updateContext } = useSupamachine<MyContext, MyAppState>();
+
+  switch (state.status) {
+    case AuthStateStatus.CHECKING:
+    case AuthStateStatus.CONTEXT_LOADING:
+      return <Loading />;
+    case AuthStateStatus.SIGNED_OUT:
+      return <Login />;
+    case "MAIN_APP":
+      return <Home session={state.session} />;
+    default:
+      return <Loading />;
+  }
+}
+```
+
+### Provider API
+
+- **supabase** (required) – Supabase client instance
+- **loadContext(session)** – Optional. Fetches app context (e.g. user profile) after auth
+- **initializeApp({ session, context })** – Optional. Side effects after context is loaded (e.g. set avatar)
+- **mapState(snapshot)** – Optional. Maps the internal AUTH_READY state to your custom app states
+- **options** – Optional. `logLevel`, `getSessionTimeoutMs`, `loadContextTimeoutMs`, `initializeAppTimeoutMs`
+
+### updateContext
+
+Use `updateContext` to imperatively update context and trigger a re-run of `mapState`:
+
+```ts
+supamachine.updateContext((current) => ({
+  ...current,
+  userData: { ...current.userData, onboardingComplete: true },
+}));
 ```
 
 ## Philosophy
 
-Handling auth in your app is all about _states._ Complicated states. States such as "The user's account has been verified but they haven't set a password yet." If you're reading this then you already know how quickly this turns into a big bowl of spaghetti.
-
-What Supamachine does is explicitly and completely define every possible authentication state your app can be in when using Supabase Auth, define transitions between those states. This allows you to focus on what you actually want to accomplish, such as conditionally rendering based on auth state in a way that is easy to read and easy to reason about.
-
-But most importantly, it's deterministic. By capturing _all_ of these possible states and transitions, you no longer have to worry yourself about the many, many edge cases that crop up in practice and are probably unhandled (or underhandled) in your app. Let Supamachine worry about these for you!
-
-Lastly, Supamachine is designed to handle your real-world cases and complexity, and provides several mechanisms for extending the state machine to cover custom states.
+Handling auth in your app is all about _states._ Supamachine explicitly defines every possible state (CHECKING, SIGNED_OUT, CONTEXT_LOADING, INITIALIZING, AUTH_READY, ERROR_*) and lets you extend with custom states via `mapState`. By capturing all states and transitions, edge cases are handled deterministically.

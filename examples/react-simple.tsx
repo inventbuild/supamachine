@@ -2,17 +2,27 @@
 // @ts-nocheck
 
 import { SupamachineProvider, useSupamachine } from "supamachine/react";
+import type { User, Session } from "@supabase/supabase-js";
+import { AuthStateStatus } from "supamachine/core/constants";
 import { supabase } from "./supabaseClient";
 
+type MyContext = {
+  userData: {
+    name: string;
+    email: string;
+  };
+};
+
 function AuthSwitch() {
-  const { state } = useSupamachine();
+  const { state } = useSupamachine<MyContext>();
 
   switch (state.status) {
-    case "CHECKING":
+    case AuthStateStatus.CHECKING:
+    case AuthStateStatus.CONTEXT_LOADING:
       return <Loading />;
-    case "SIGNED_OUT":
+    case AuthStateStatus.SIGNED_OUT:
       return <Login />;
-    case "SIGNED_IN":
+    case AuthStateStatus.AUTH_READY:
       return <Home user={state.user} />;
     default:
       return null;
@@ -21,10 +31,9 @@ function AuthSwitch() {
 
 export function App() {
   return (
-    <SupamachineProvider
+    <SupamachineProvider<MyContext>
       supabase={supabase}
       loadContext={async (session) => {
-        // get user profile
         const { data, error } = await supabase
           .from("profiles")
           .select("*")
@@ -34,11 +43,21 @@ export function App() {
           throw error;
         }
         return {
-          user: data,
+          userData: data,
         };
       }}
     >
       <AuthSwitch />
     </SupamachineProvider>
   );
+}
+
+function Loading() {
+  return <div>Loading...</div>;
+}
+function Login() {
+  return <div>Login</div>;
+}
+function Home({ session }: { session: Session }) {
+  return <div>Home: {session.user.email}</div>;
 }

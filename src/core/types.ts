@@ -5,9 +5,6 @@ import type { CoreState } from "./states";
 import { AuthStateStatus } from "./constants";
 
 // C: custom context type, D: custom additional states type
-export type AppState<C, D> =
-  | Exclude<CoreState<C>, { status: typeof AuthStateStatus.AUTH_READY }>
-  | D;
 
 type DisallowedStatuses =
   | typeof AuthStateStatus.START
@@ -24,6 +21,10 @@ type CustomStateConstraint = {
   status: Exclude<string, DisallowedStatuses>;
 };
 
+export type AppState<C, D> =
+  | Exclude<CoreState<C>, { status: typeof AuthStateStatus.AUTH_READY }>
+  | D;
+
 export interface SupamachineProviderProps<C, D extends CustomStateConstraint> {
   loadContext?: (session: Session) => Promise<C>;
   initializeApp?: (snapshot: {
@@ -35,11 +36,11 @@ export interface SupamachineProviderProps<C, D extends CustomStateConstraint> {
       CoreState<C>,
       { status: typeof AuthStateStatus.AUTH_READY }
     >,
-  ) => AppState<C, D>;
+  ) => D;
   children: React.ReactNode;
 }
 
 export type useSupamachineProps<C, D extends CustomStateConstraint> = {
   state: AppState<C, D>;
-  updateContext: (context: C) => C | Promise<C>;
+  updateContext: (updater: (current: C) => C | Promise<C>) => Promise<void>;
 };
