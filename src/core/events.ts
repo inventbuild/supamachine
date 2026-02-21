@@ -1,6 +1,6 @@
 import type { Session } from '@supabase/supabase-js'
-import type { UserData, AppContext } from './states'
-import { AuthEventType, ErrorType } from './constants'
+import type { UserData, AppContext } from './types'
+import { AuthEventType } from './constants'
 
 export type AuthEvent =
   | { type: typeof AuthEventType.START }
@@ -12,4 +12,6 @@ export type AuthEvent =
       userData: UserData | null
       context: AppContext
     }
-  | { type: typeof AuthEventType.ERROR; error: Error; errorType: ErrorType }
+  | { type: typeof AuthEventType.ERROR_CHECKING; error: Error }
+  | { type: typeof AuthEventType.ERROR_CONTEXT; error: Error }
+  | { type: typeof AuthEventType.ERROR_AUTH; error: Error }

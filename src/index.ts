@@ -1,11 +1,14 @@
-export { SupamachineProvider, useSupamachine } from './react/SupamachineProvider'
-export type { SupamachineOptions } from './react/SupamachineProvider'
-export type { AuthState } from './core/states'
-export { AuthStateStatus, AuthEventType, ErrorType } from './core/constants'
-export { LogLevel } from './core/logger'
+export {
+  SupamachineProvider,
+  useSupamachine,
+} from "./react/SupamachineProvider";
+export type { SupamachineOptions } from "./react/SupamachineProvider";
+export type { AuthState } from "./core/states";
+export { AuthStateStatus, AuthEventType } from "./core/constants";
+export { LogLevel } from "./core/logger";
 export type {
   LoadContext,
-  DeriveAppState,
+  MapState,
   InitializeApp,
   ContextUpdater,
   AppState,
@@ -13,4 +16,4 @@ export type {
   AppContext,
   LoadContextResult,
   SessionLike,
-} from './core/types'
+} from "./core/types";

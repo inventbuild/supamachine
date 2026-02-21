@@ -1,37 +1,45 @@
 // API-facing types for Supamachine
 
 import type { Session, User } from "@supabase/supabase-js";
-import type { AuthState } from "./states";
+import type { CoreState } from "./states";
+import { AuthStateStatus } from "./constants";
 
-/** Minimal session shape for loadContext. Supabase Session satisfies this. */
-export type SessionLike = Pick<Session, "user">;
+// C: custom context type, D: custom additional states type
+export type AppState<C, D> =
+  | Exclude<CoreState<C>, { status: typeof AuthStateStatus.AUTH_READY }>
+  | D;
 
-export type UserData = unknown;
-export type AppContext = unknown;
-export type AppState = string;
+type DisallowedStatuses =
+  | typeof AuthStateStatus.START
+  | typeof AuthStateStatus.CHECKING
+  | typeof AuthStateStatus.ERROR_CHECKING
+  | typeof AuthStateStatus.SIGNED_OUT
+  | typeof AuthStateStatus.CONTEXT_LOADING
+  | typeof AuthStateStatus.ERROR_CONTEXT
+  | typeof AuthStateStatus.INITIALIZING
+  | typeof AuthStateStatus.ERROR_INITIALIZING
+  | typeof AuthStateStatus.AUTH_READY;
 
-export interface LoadContextResult {
-  userData?: UserData | null;
-  context?: AppContext;
+type CustomStateConstraint = {
+  status: Exclude<string, DisallowedStatuses>;
+};
+
+export interface SupamachineProviderProps<C, D extends CustomStateConstraint> {
+  loadContext?: (session: Session) => Promise<C>;
+  initializeApp?: (snapshot: {
+    session: Session;
+    context: C;
+  }) => void | Promise<void>;
+  mapState?: (
+    snapshot: Extract<
+      CoreState<C>,
+      { status: typeof AuthStateStatus.AUTH_READY }
+    >,
+  ) => AppState<C, D>;
+  children: React.ReactNode;
 }
 
-export type LoadContext = (
-  session: SessionLike | null
-) => Promise<LoadContextResult>;
-
-export type DeriveAppState = (
-  coreState: AuthState,
-  context: AppContext | null
-) => AppState;
-
-export type InitializeApp = (ctx: {
-  session: Session;
-  user: User;
-  userData: UserData;
-  context?: AppContext;
-}) => Promise<void>;
-
-export type ContextUpdater = (
-  coreState: AuthState,
-  currentContext: AppContext
-) => AppContext | Promise<AppContext>;
+export type useSupamachineProps<C, D extends CustomStateConstraint> = {
+  state: AppState<C, D>;
+  updateContext: (context: C) => C | Promise<C>;
+};

@@ -12,7 +12,7 @@ import { AuthEventType } from '../core/constants'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type {
   LoadContext,
-  DeriveAppState,
+  MapState,
   InitializeApp,
   ContextUpdater,
   AppState,
@@ -37,7 +37,7 @@ const SupamachineContext = createContext<SupamachineContextValue | null>(null)
 export function SupamachineProvider({
   supabase,
   loadContext,
-  deriveAppState,
+  mapState,
   initializeApp,
   contextUpdaters,
   children,
@@ -45,13 +45,14 @@ export function SupamachineProvider({
 }: {
   supabase: SupabaseClient
   loadContext: LoadContext
-  deriveAppState?: DeriveAppState
+  mapState?: MapState
   initializeApp?: InitializeApp
   contextUpdaters?: ContextUpdater[]
   children: React.ReactNode
   options?: SupamachineOptions
 }) {
   const coreRef = useRef<SupamachineCore | null>(null)
+  const unsubAdapterRef = useRef<(() => void) | null>(null)
   const [contextValue, setContextValue] =
     useState<SupamachineContextValue | null>(null)
 
@@ -63,7 +64,7 @@ export function SupamachineProvider({
   if (!coreRef.current) {
     coreRef.current = new SupamachineCore(
       loadContext,
-      deriveAppState,
+      mapState,
       initializeApp,
       {
         loadContextTimeoutMs: options?.loadContextTimeoutMs,
@@ -72,7 +73,7 @@ export function SupamachineProvider({
       }
     )
     coreRef.current.setContextUpdaters(contextUpdaters ?? [])
-    attachSupabase(coreRef.current, supabase, {
+    unsubAdapterRef.current = attachSupabase(coreRef.current, supabase, {
       getSessionTimeoutMs: options?.getSessionTimeoutMs,
       logLevel,
     })
@@ -92,6 +93,7 @@ export function SupamachineProvider({
     )
     return () => {
       unsubscribe()
+      unsubAdapterRef.current?.()
     }
   }, [])
 
