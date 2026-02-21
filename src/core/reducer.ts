@@ -27,7 +27,7 @@ export function reducer<C>(
     case AuthStateStatus.START:
       switch (event.type) {
         case AuthEventType.START:
-          next = { status: AuthStateStatus.CHECKING, context: null };
+          next = { status: AuthStateStatus.CHECKING };
           break;
         default:
           return invalidTransition(state, event);
@@ -43,14 +43,13 @@ export function reducer<C>(
               session: event.session,
             };
           } else {
-            next = { status: AuthStateStatus.SIGNED_OUT, context: null };
+            next = { status: AuthStateStatus.SIGNED_OUT };
           }
           break;
         case AuthEventType.ERROR_CHECKING:
           next = {
             status: AuthStateStatus.ERROR_CHECKING,
             error: event.error,
-            context: null,
           };
           break;
         default:
@@ -72,12 +71,11 @@ export function reducer<C>(
             status: AuthStateStatus.ERROR_CONTEXT,
             session: state.session,
             error: event.error,
-            context: null,
           };
           break;
         case AuthEventType.AUTH_CHANGED:
           if (!event.session) {
-            next = { status: AuthStateStatus.SIGNED_OUT, context: null };
+            next = { status: AuthStateStatus.SIGNED_OUT };
           } else {
             next = {
               status: AuthStateStatus.CONTEXT_LOADING,
@@ -109,7 +107,7 @@ export function reducer<C>(
           break;
         case AuthEventType.AUTH_CHANGED:
           if (!event.session) {
-            next = { status: AuthStateStatus.SIGNED_OUT, context: null };
+            next = { status: AuthStateStatus.SIGNED_OUT };
           } else {
             next = {
               status: AuthStateStatus.CONTEXT_LOADING,
@@ -126,7 +124,7 @@ export function reducer<C>(
       switch (event.type) {
         case AuthEventType.AUTH_CHANGED:
           if (!event.session) {
-            next = { status: AuthStateStatus.SIGNED_OUT, context: null };
+            next = { status: AuthStateStatus.SIGNED_OUT };
           } else {
             next = {
               status: AuthStateStatus.CONTEXT_LOADING,
@@ -178,7 +176,7 @@ export function reducer<C>(
               session: event.session,
             };
           } else {
-            next = { status: AuthStateStatus.SIGNED_OUT, context: null };
+            next = { status: AuthStateStatus.SIGNED_OUT };
           }
           break;
         default:

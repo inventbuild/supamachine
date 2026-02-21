@@ -42,7 +42,6 @@ function computeAppState<C, D>(
 export class SupamachineCore<C, D> {
   private state: CoreState<C> = {
     status: AuthStateStatus.START,
-    context: null,
   };
   private sessionForLoading: Session | null = null;
   private listeners = new Set<

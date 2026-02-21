@@ -16,7 +16,7 @@ pnpm dev   # tsc --watch
 
 This continuously outputs compiled files to `dist/`.
 
-## 3. Link Into PhotoPhlo
+## 3. Link Into Test Project
 
 ```
 cd supamachine
@@ -37,13 +37,6 @@ Run two terminals:
 - Terminal B (my-app): e.g. `expo start`
 
 # Build Process
-
-During development:
-
-- Use `tsc --watch`
-- Do not manually rebuild on every change
-
-Before release:
 
 ```
 pnpm build

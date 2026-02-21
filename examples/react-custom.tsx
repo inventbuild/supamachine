@@ -1,11 +1,10 @@
 // This example demonstrates Supamachine with custom app states.
-// @ts-nocheck
 
 import {
   SupamachineProvider,
   useSupamachine,
   AuthStateStatus,
-} from "supamachine";
+} from "@inventbuild/supamachine";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./supabaseClient";
 
@@ -20,10 +19,10 @@ type MyContext = {
 };
 
 type MyAppState =
-  | { status: "NEEDS_VERIFICATION" }
-  | { status: "NEEDS_PASSWORD" }
-  | { status: "NEEDS_ONBOARDING" }
-  | { status: "MAIN_APP" };
+  | { status: "NEEDS_VERIFICATION"; session: Session; context: MyContext }
+  | { status: "NEEDS_PASSWORD"; session: Session; context: MyContext }
+  | { status: "NEEDS_ONBOARDING"; session: Session; context: MyContext }
+  | { status: "MAIN_APP"; session: Session; context: MyContext };
 
 async function loadContext(session: Session): Promise<MyContext> {
   const { data, error } = await supabase

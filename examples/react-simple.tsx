@@ -1,9 +1,11 @@
 // This example demonstrates the simplest possible Supamachine setup.
-// @ts-nocheck
 
-import { SupamachineProvider, useSupamachine } from "supamachine/react";
-import type { User, Session } from "@supabase/supabase-js";
-import { AuthStateStatus } from "supamachine/core/constants";
+import {
+  SupamachineProvider,
+  useSupamachine,
+  AuthStateStatus,
+} from "@inventbuild/supamachine";
+import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./supabaseClient";
 
 type MyContext = {
@@ -12,6 +14,16 @@ type MyContext = {
     email: string;
   };
 };
+
+function Loading() {
+  return <div>Loading...</div>;
+}
+function Login() {
+  return <div>Login</div>;
+}
+function Home({ session }: { session: Session }) {
+  return <div>Home: {session.user.email}</div>;
+}
 
 function AuthSwitch() {
   const { state } = useSupamachine<MyContext>();
@@ -23,7 +35,7 @@ function AuthSwitch() {
     case AuthStateStatus.SIGNED_OUT:
       return <Login />;
     case AuthStateStatus.AUTH_READY:
-      return <Home user={state.user} />;
+      return <Home session={state.session} />;
     default:
       return null;
   }
@@ -50,14 +62,4 @@ export function App() {
       <AuthSwitch />
     </SupamachineProvider>
   );
-}
-
-function Loading() {
-  return <div>Loading...</div>;
-}
-function Login() {
-  return <div>Login</div>;
-}
-function Home({ session }: { session: Session }) {
-  return <div>Home: {session.user.email}</div>;
 }

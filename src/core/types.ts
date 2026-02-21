@@ -21,26 +21,29 @@ type CustomStateConstraint = {
   status: Exclude<string, DisallowedStatuses>;
 };
 
-export type AppState<C, D> =
-  | Exclude<CoreState<C>, { status: typeof AuthStateStatus.AUTH_READY }>
-  | D;
+/** When D is void (default), returns CoreState. When D is custom states, returns Exclude<CoreState, AUTH_READY> | D */
+export type AppState<C, D = void> = [D] extends [void]
+  ? CoreState<C>
+  : Exclude<CoreState<C>, { status: typeof AuthStateStatus.AUTH_READY }> | D;
 
-export interface SupamachineProviderProps<C, D extends CustomStateConstraint> {
+export interface SupamachineProviderProps<C, D extends CustomStateConstraint | void = void> {
   loadContext?: (session: Session) => Promise<C>;
   initializeApp?: (snapshot: {
     session: Session;
     context: C;
   }) => void | Promise<void>;
-  mapState?: (
-    snapshot: Extract<
-      CoreState<C>,
-      { status: typeof AuthStateStatus.AUTH_READY }
-    >,
-  ) => D;
+  mapState?: [D] extends [void]
+    ? never
+    : (
+        snapshot: Extract<
+          CoreState<C>,
+          { status: typeof AuthStateStatus.AUTH_READY }
+        >,
+      ) => D;
   children: React.ReactNode;
 }
 
-export type useSupamachineProps<C, D extends CustomStateConstraint> = {
+export type UseSupamachineReturn<C, D extends CustomStateConstraint | void = void> = {
   state: AppState<C, D>;
   updateContext: (updater: (current: C) => C | Promise<C>) => Promise<void>;
 };

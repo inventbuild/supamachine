@@ -8,5 +8,5 @@ export { LogLevel } from "./core/logger";
 export type {
   AppState,
   SupamachineProviderProps,
-  useSupamachineProps,
+  UseSupamachineReturn,
 } from "./core/types";

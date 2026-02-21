@@ -20,12 +20,12 @@ export type SupamachineOptions = {
   logLevel?: "none" | "error" | "warn" | "info" | "debug";
 };
 
-export interface SupamachineProviderPropsWithSupabase<C, D extends { status: string }>
+export interface SupamachineProviderPropsWithSupabase<C, D extends { status: string } | void = void>
   extends SupamachineProviderProps<C, D> {
   supabase: SupabaseClient;
 }
 
-export interface SupamachineContextValue<C, D extends { status: string }> {
+export interface SupamachineContextValue<C, D extends { status: string } | void = void> {
   state: import("../core/types").AppState<C, D>;
   updateContext: (updater: (current: C) => C | Promise<C>) => Promise<void>;
 }
@@ -34,7 +34,7 @@ const SupamachineContext = createContext<SupamachineContextValue<unknown, { stat
   null,
 );
 
-export function SupamachineProvider<C, D extends { status: string }>({
+export function SupamachineProvider<C, D extends { status: string } | void = void>({
   supabase,
   loadContext,
   mapState,
@@ -95,7 +95,7 @@ export function SupamachineProvider<C, D extends { status: string }>({
   );
 }
 
-export function useSupamachine<C, D extends { status: string }>() {
+export function useSupamachine<C, D extends { status: string } | void = void>() {
   const ctx = useContext(SupamachineContext);
   if (!ctx) {
     throw new Error("useSupamachine must be used within SupamachineProvider");

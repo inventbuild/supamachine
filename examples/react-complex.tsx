@@ -1,11 +1,10 @@
 // This example demonstrates Supamachine with initializeApp, updateContext and options.
-// @ts-nocheck
 
 import {
   SupamachineProvider,
   useSupamachine,
   AuthStateStatus,
-} from "supamachine";
+} from "@inventbuild/supamachine";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./supabaseClient";
 

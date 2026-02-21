@@ -21,5 +21,9 @@
     "@types/react": "^18.0.0",
     "prettier": "^3.8.1",
     "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@inventbuild/supamachine": "link:../../Library/pnpm/global/5/node_modules/@inventbuild/supamachine",
+    "supamachine": "link:../../Library/pnpm/global/5/node_modules/supamachine"
   }
 }
