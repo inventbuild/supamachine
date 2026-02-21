@@ -90,15 +90,8 @@ export class SupamachineCore<C, D> {
     const prevState = this.state;
     this.state = reducer(this.state, event);
 
-    if (event.type === AuthEventType.AUTH_RESOLVED && event.session) {
-      this.sessionForLoading = event.session;
-    } else if (event.type === AuthEventType.AUTH_CHANGED && event.session) {
-      this.sessionForLoading = event.session;
-    } else if (
-      event.type === AuthEventType.AUTH_RESOLVED ||
-      event.type === AuthEventType.AUTH_CHANGED
-    ) {
-      this.sessionForLoading = null;
+    if (event.type === AuthEventType.AUTH_CHANGED) {
+      this.sessionForLoading = event.session ?? null;
     }
 
     this.emit();

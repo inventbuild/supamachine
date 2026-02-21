@@ -31,7 +31,7 @@ export function attachSupabase<C, D>(
         });
       } else {
         core.dispatch({
-          type: AuthEventType.AUTH_RESOLVED,
+          type: AuthEventType.AUTH_CHANGED,
           session: data.session ?? null,
         });
       }

@@ -14,19 +14,19 @@ describe("reducer", () => {
     expect(next.status).toBe(S.CHECKING);
   });
 
-  it("CHECKING + AUTH_RESOLVED(session) → CONTEXT_LOADING", () => {
+  it("CHECKING + AUTH_CHANGED(session) → CONTEXT_LOADING", () => {
     const next = reducer(
       { status: S.CHECKING },
-      { type: E.AUTH_RESOLVED, session },
+      { type: E.AUTH_CHANGED, session },
     );
     expect(next.status).toBe(S.CONTEXT_LOADING);
     expect(next).toHaveProperty("session", session);
   });
 
-  it("CHECKING + AUTH_RESOLVED(null) → SIGNED_OUT", () => {
+  it("CHECKING + AUTH_CHANGED(null) → SIGNED_OUT", () => {
     const next = reducer(
       { status: S.CHECKING },
-      { type: E.AUTH_RESOLVED, session: null },
+      { type: E.AUTH_CHANGED, session: null },
     );
     expect(next.status).toBe(S.SIGNED_OUT);
   });
@@ -80,25 +80,25 @@ describe("reducer", () => {
   });
 
   // --- Recovery from error states ---
-  it("ERROR_CHECKING + AUTH_RESOLVED(session) → CONTEXT_LOADING", () => {
+  it("ERROR_CHECKING + AUTH_CHANGED(session) → CONTEXT_LOADING", () => {
     const next = reducer(
       { status: S.ERROR_CHECKING, error: new Error("x") },
-      { type: E.AUTH_RESOLVED, session },
+      { type: E.AUTH_CHANGED, session },
     );
     expect(next.status).toBe(S.CONTEXT_LOADING);
   });
 
-  it("SIGNED_OUT + AUTH_RESOLVED(session) → CONTEXT_LOADING", () => {
+  it("SIGNED_OUT + AUTH_CHANGED(session) → CONTEXT_LOADING", () => {
     const next = reducer(
       { status: S.SIGNED_OUT },
-      { type: E.AUTH_RESOLVED, session },
+      { type: E.AUTH_CHANGED, session },
     );
     expect(next.status).toBe(S.CONTEXT_LOADING);
   });
 
-  it("SIGNED_OUT + AUTH_RESOLVED(null) → stays SIGNED_OUT", () => {
+  it("SIGNED_OUT + AUTH_CHANGED(null) → stays SIGNED_OUT", () => {
     const state = { status: S.SIGNED_OUT } as const;
-    const next = reducer(state, { type: E.AUTH_RESOLVED, session: null });
+    const next = reducer(state, { type: E.AUTH_CHANGED, session: null });
     expect(next).toBe(state);
   });
 

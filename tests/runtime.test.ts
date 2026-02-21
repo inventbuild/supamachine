@@ -1,6 +1,9 @@
 import { describe, it, expect, vi } from "vitest";
 import { SupamachineCore } from "../src/core/runtime";
-import { AuthEventType as E, AuthStateStatus as S } from "../src/core/constants";
+import {
+  AuthEventType as E,
+  AuthStateStatus as S,
+} from "../src/core/constants";
 import type { Session } from "@supabase/supabase-js";
 
 const session = { user: { id: "u1" } } as Session;
@@ -19,7 +22,7 @@ describe("SupamachineCore", () => {
     core.dispatch({ type: E.START });
     expect(core.getSnapshot().status).toBe(S.CHECKING);
 
-    core.dispatch({ type: E.AUTH_RESOLVED, session });
+    core.dispatch({ type: E.AUTH_CHANGED, session });
     expect(core.getSnapshot().status).toBe(S.CONTEXT_LOADING);
 
     await vi.waitFor(() => {
@@ -37,7 +40,7 @@ describe("SupamachineCore", () => {
     });
 
     core.dispatch({ type: E.START });
-    core.dispatch({ type: E.AUTH_RESOLVED, session });
+    core.dispatch({ type: E.AUTH_CHANGED, session });
 
     await vi.waitFor(() => {
       expect(core.getSnapshot().status).toBe(S.ERROR_CONTEXT);
@@ -49,7 +52,7 @@ describe("SupamachineCore", () => {
     const core = new SupamachineCore({ initializeApp, logLevel: 0 });
 
     core.dispatch({ type: E.START });
-    core.dispatch({ type: E.AUTH_RESOLVED, session });
+    core.dispatch({ type: E.AUTH_CHANGED, session });
 
     await vi.waitFor(() => {
       expect(core.getSnapshot().status).toBe(S.AUTH_READY);
@@ -58,7 +61,7 @@ describe("SupamachineCore", () => {
     expect(initializeApp).toHaveBeenCalled();
   });
 
-  it("mapState transforms AUTH_READY into custom state", async () => {
+  it("mapState transitions to custom state", async () => {
     const core = new SupamachineCore({
       mapState: (snap) => ({ status: "DASHBOARD" as const }),
       initializeApp: async () => {},
@@ -66,7 +69,7 @@ describe("SupamachineCore", () => {
     });
 
     core.dispatch({ type: E.START });
-    core.dispatch({ type: E.AUTH_RESOLVED, session });
+    core.dispatch({ type: E.AUTH_CHANGED, session });
 
     await vi.waitFor(() => {
       expect(core.getSnapshot().status).toBe(S.AUTH_READY);
@@ -84,7 +87,7 @@ describe("SupamachineCore", () => {
     });
 
     core.dispatch({ type: E.START });
-    core.dispatch({ type: E.AUTH_RESOLVED, session });
+    core.dispatch({ type: E.AUTH_CHANGED, session });
 
     await vi.waitFor(() => {
       expect(core.getSnapshot().status).toBe(S.AUTH_READY);

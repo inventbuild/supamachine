@@ -4,8 +4,7 @@ import { AuthEventType } from "./constants";
 export type AuthEvent<C> =
   | { type: typeof AuthEventType.START }
 
-  // Auth resolution
-  | { type: typeof AuthEventType.AUTH_RESOLVED; session: Session | null }
+  // Auth state update (initial resolution or subsequent change)
   | { type: typeof AuthEventType.AUTH_CHANGED; session: Session | null }
 
   // Context resolution

@@ -23,7 +23,6 @@ export type AuthStateStatus =
  */
 export const AuthEventType = {
   START: "START",
-  AUTH_RESOLVED: "AUTH_RESOLVED",
   AUTH_CHANGED: "AUTH_CHANGED",
   CONTEXT_RESOLVED: "CONTEXT_RESOLVED",
   INITIALIZED: "INITIALIZED",

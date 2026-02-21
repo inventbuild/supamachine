@@ -36,7 +36,7 @@ export function reducer<C>(
 
     case AuthStateStatus.CHECKING:
       switch (event.type) {
-        case AuthEventType.AUTH_RESOLVED:
+        case AuthEventType.AUTH_CHANGED:
           if (event.session) {
             next = {
               status: AuthStateStatus.CONTEXT_LOADING,
@@ -149,16 +149,6 @@ export function reducer<C>(
             next = state;
           }
           break;
-        case AuthEventType.AUTH_RESOLVED:
-          if (event.session) {
-            next = {
-              status: AuthStateStatus.CONTEXT_LOADING,
-              session: event.session,
-            };
-          } else {
-            next = state;
-          }
-          break;
         default:
           return invalidTransition(state, event);
       }
@@ -168,7 +158,6 @@ export function reducer<C>(
     case AuthStateStatus.ERROR_CONTEXT:
     case AuthStateStatus.ERROR_INITIALIZING:
       switch (event.type) {
-        case AuthEventType.AUTH_RESOLVED:
         case AuthEventType.AUTH_CHANGED:
           if (event.session) {
             next = {
