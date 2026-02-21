@@ -7,7 +7,9 @@ export { AuthStateStatus } from "./core/constants";
 export { LogLevel } from "./core/logger";
 export type {
   AppState,
+  DefaultActions,
   MapStateSnapshot,
+  SupamachineActions,
   SupamachineProviderProps,
   UseSupamachineReturn,
 } from "./core/types";

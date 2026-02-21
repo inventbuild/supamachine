@@ -1,0 +1,10 @@
+2. isSigningIn vs CHECKING
+
+ok yeah if this is just component state for the UI then it's fine, it doesn't need to touch supamachine.
+
+3. SKIP_WELCOME_SCREEN_KEY and PENDING_SIGNUP_EMAIL_KEY: ok yeah makes sense. we don't need to change supamachine to account for this. it's not a big deal to run some stuff in your index before supamachine starts. AS LONG AS it doesn't create race conditions!
+
+6. deep links: ok yeah a bootstrap phase makes sense; though I'd want to see what exactly you have in mind.
+
+9. supamachine adapter currently treats TOKEN_REFRESHED the same as SIGNED_OUT and dispatches session: null —well that's a massive problem!!! please fix
+

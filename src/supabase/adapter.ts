@@ -61,10 +61,16 @@ export function attachSupabase<C, D>(
         break;
 
       case "SIGNED_OUT":
-      case "TOKEN_REFRESHED":
         core.dispatch({
           type: AuthEventType.AUTH_CHANGED,
           session: null,
+        });
+        break;
+
+      case "TOKEN_REFRESHED":
+        core.dispatch({
+          type: AuthEventType.AUTH_CHANGED,
+          session: session ?? null,
         });
         break;
 

@@ -47,6 +47,7 @@ function computeAppState<C, D>(
 export class SupamachineCore<C, D> {
   private state: CoreState<C> = {
     status: AuthStateStatus.START,
+    context: null,
   };
   private sessionForLoading: Session | null = null;
   private listeners = new Set<
@@ -88,7 +89,7 @@ export class SupamachineCore<C, D> {
 
   dispatch(event: AuthEvent<C>) {
     const prevState = this.state;
-    this.state = reducer(this.state, event);
+    this.state = reducer<C>(this.state, event);
 
     if (event.type === AuthEventType.AUTH_CHANGED) {
       this.sessionForLoading = event.session ?? null;

@@ -40,9 +40,18 @@ export type AppState<C, D = void> = [D] extends [void]
       | Exclude<CoreState<C>, { status: typeof AuthStateStatus.AUTH_READY }>
       | WithSessionContext<C, D>;
 
+/** Default actions provided when none are passed. signOut is always available. */
+export type DefaultActions = {
+  signOut: () => void | Promise<unknown>;
+};
+
+/** User-provided auth actions (signIn, signOut, etc.). Merged with default signOut. */
+export type SupamachineActions<A = Record<string, never>> = DefaultActions & A;
+
 export interface SupamachineProviderProps<
   C,
   D extends CustomStateConstraint | void = void,
+  A extends Record<string, (...args: any[]) => any> = Record<string, (...args: any[]) => any>,
 > {
   loadContext?: (session: Session) => Promise<C>;
   initializeApp?: (snapshot: {
@@ -52,13 +61,17 @@ export interface SupamachineProviderProps<
   mapState?: [D] extends [void]
     ? never
     : (snapshot: MapStateSnapshot<C>) => D;
+  /** Auth actions to expose via useSupamachine(). Merged with default signOut. */
+  actions?: A;
   children: React.ReactNode;
 }
 
 export type UseSupamachineReturn<
   C,
   D extends CustomStateConstraint | void = void,
+  A extends Record<string, (...args: any[]) => any> = Record<string, (...args: any[]) => any>,
 > = {
   state: AppState<C, D>;
   updateContext: (updater: (current: C) => C | Promise<C>) => Promise<void>;
+  actions: SupamachineActions<A>;
 };

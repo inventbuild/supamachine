@@ -5,7 +5,6 @@ import {
   useSupamachine,
   AuthStateStatus,
 } from "@inventbuild/supamachine";
-import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./supabaseClient";
 
 type MyContext = {
@@ -21,8 +20,11 @@ function Loading() {
 function Login() {
   return <div>Login</div>;
 }
-function Home({ session }: { session: Session }) {
-  return <div>Home: {session.user.email}</div>;
+function Home() {
+  const { state } = useSupamachine<MyContext>();
+  const session = "session" in state ? state.session : null;
+  const name = state.context?.userData?.name ?? state.context?.userData?.email ?? session?.user?.email;
+  return <div>Home: {name}</div>;
 }
 
 function AuthSwitch() {
@@ -35,7 +37,7 @@ function AuthSwitch() {
     case AuthStateStatus.SIGNED_OUT:
       return <Login />;
     case AuthStateStatus.AUTH_READY:
-      return <Home session={state.session} />;
+      return <Home />;
     default:
       return null;
   }

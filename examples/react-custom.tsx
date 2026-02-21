@@ -73,16 +73,16 @@ function AuthSwitch() {
     case "NEEDS_PASSWORD":
       return <SetPassword />;
     case "NEEDS_ONBOARDING":
-      return <Onboarding state={state} />;
+      return <Onboarding />;
     case "APP_READY":
-      return <Home session={state.session} />;
+      return <Home />;
     default:
       return <Loading />;
   }
 }
 
-function Onboarding({ state }: { state: { status: "NEEDS_ONBOARDING" } }) {
-  const { updateContext } = useSupamachine<MyContext, MyAppState>();
+function Onboarding() {
+  const { state, updateContext } = useSupamachine<MyContext, MyAppState>();
 
   const complete = () => {
     updateContext((ctx) => ({
@@ -91,9 +91,11 @@ function Onboarding({ state }: { state: { status: "NEEDS_ONBOARDING" } }) {
     }));
   };
 
+  const name = state.context?.userData?.name ?? state.context?.userData?.email ?? "there";
+
   return (
     <div>
-      Onboarding
+      <p>Hi {name}, complete onboarding to continue.</p>
       <button onClick={complete}>Complete</button>
     </div>
   );
@@ -118,11 +120,20 @@ function Login() {
   return <div>Login</div>;
 }
 function VerifyEmail() {
-  return <div>Verify your email</div>;
+  const { state } = useSupamachine<MyContext, MyAppState>();
+  const email = state.context?.userData?.email;
+  return (
+    <div>
+      Verify your email{email ? ` (${email})` : ""}.
+    </div>
+  );
 }
 function SetPassword() {
   return <div>Set your password</div>;
 }
-function Home({ session }: { session: Session }) {
-  return <div>Home: {session.user.email}</div>;
+function Home() {
+  const { state } = useSupamachine<MyContext, MyAppState>();
+  const session = "session" in state ? state.session : null;
+  const name = state.context?.userData?.name ?? state.context?.userData?.email ?? session?.user?.email;
+  return <div>Home: {name}</div>;
 }

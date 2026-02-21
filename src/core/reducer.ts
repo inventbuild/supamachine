@@ -9,12 +9,15 @@ export function setReducerLogLevel(level: LogLevel) {
   log = createLogger("reducer", level);
 }
 
+/** Pre-context states use null; avoids TS inferring C = null from literal */
+const NO_CONTEXT = null;
+
 function invalidTransition<C>(
   state: CoreState<C>,
   event: AuthEvent<C>,
 ): CoreState<C> {
   log.warn(`invalid transition: ${state.status} + ${event.type}`);
-  return state;
+  return state as CoreState<C>;
 }
 
 export function reducer<C>(
@@ -27,10 +30,10 @@ export function reducer<C>(
     case AuthStateStatus.START:
       switch (event.type) {
         case AuthEventType.START:
-          next = { status: AuthStateStatus.CHECKING };
+          next = { status: AuthStateStatus.CHECKING, context: NO_CONTEXT };
           break;
         default:
-          return invalidTransition(state, event);
+          return invalidTransition(state, event) as CoreState<C>;
       }
       break;
 
@@ -41,19 +44,21 @@ export function reducer<C>(
             next = {
               status: AuthStateStatus.CONTEXT_LOADING,
               session: event.session,
+              context: NO_CONTEXT,
             };
           } else {
-            next = { status: AuthStateStatus.SIGNED_OUT };
+            next = { status: AuthStateStatus.SIGNED_OUT, context: NO_CONTEXT };
           }
           break;
         case AuthEventType.ERROR_CHECKING:
           next = {
             status: AuthStateStatus.ERROR_CHECKING,
             error: event.error,
+            context: NO_CONTEXT,
           };
           break;
         default:
-          return invalidTransition(state, event);
+          return invalidTransition(state, event) as CoreState<C>;
       }
       break;
 
@@ -71,20 +76,22 @@ export function reducer<C>(
             status: AuthStateStatus.ERROR_CONTEXT,
             session: state.session,
             error: event.error,
+            context: NO_CONTEXT,
           };
           break;
         case AuthEventType.AUTH_CHANGED:
           if (!event.session) {
-            next = { status: AuthStateStatus.SIGNED_OUT };
+            next = { status: AuthStateStatus.SIGNED_OUT, context: NO_CONTEXT };
           } else {
             next = {
               status: AuthStateStatus.CONTEXT_LOADING,
               session: event.session,
+              context: NO_CONTEXT,
             };
           }
           break;
         default:
-          return invalidTransition(state, event);
+          return invalidTransition(state, event) as CoreState<C>;
       }
       break;
 
@@ -107,16 +114,17 @@ export function reducer<C>(
           break;
         case AuthEventType.AUTH_CHANGED:
           if (!event.session) {
-            next = { status: AuthStateStatus.SIGNED_OUT };
+            next = { status: AuthStateStatus.SIGNED_OUT, context: NO_CONTEXT };
           } else {
             next = {
               status: AuthStateStatus.CONTEXT_LOADING,
               session: event.session,
+              context: NO_CONTEXT,
             };
           }
           break;
         default:
-          return invalidTransition(state, event);
+          return invalidTransition(state, event) as CoreState<C>;
       }
       break;
 
@@ -124,16 +132,17 @@ export function reducer<C>(
       switch (event.type) {
         case AuthEventType.AUTH_CHANGED:
           if (!event.session) {
-            next = { status: AuthStateStatus.SIGNED_OUT };
+            next = { status: AuthStateStatus.SIGNED_OUT, context: NO_CONTEXT };
           } else {
             next = {
               status: AuthStateStatus.CONTEXT_LOADING,
               session: event.session,
+              context: NO_CONTEXT,
             };
           }
           break;
         default:
-          return invalidTransition(state, event);
+          return invalidTransition(state, event) as CoreState<C>;
       }
       break;
 
@@ -144,13 +153,14 @@ export function reducer<C>(
             next = {
               status: AuthStateStatus.CONTEXT_LOADING,
               session: event.session,
+              context: NO_CONTEXT,
             };
           } else {
             next = state;
           }
           break;
         default:
-          return invalidTransition(state, event);
+          return invalidTransition(state, event) as CoreState<C>;
       }
       break;
 
@@ -163,13 +173,14 @@ export function reducer<C>(
             next = {
               status: AuthStateStatus.CONTEXT_LOADING,
               session: event.session,
+              context: NO_CONTEXT,
             };
           } else {
-            next = { status: AuthStateStatus.SIGNED_OUT };
+            next = { status: AuthStateStatus.SIGNED_OUT, context: NO_CONTEXT };
           }
           break;
         default:
-          return invalidTransition(state, event);
+          return invalidTransition(state, event) as CoreState<C>;
       }
       break;
 
@@ -180,5 +191,5 @@ export function reducer<C>(
   }
 
   log.debug(`${state.status} + ${event.type} → ${next.status}`);
-  return next;
+  return next as CoreState<C>;
 }

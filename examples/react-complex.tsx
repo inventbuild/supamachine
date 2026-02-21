@@ -1,11 +1,12 @@
 /**
- * Complex example: subscription-gated app with onboarding.
+ * Complex Supamachine example: a subscription-gated app with onboarding.
  *
  * Demonstrates:
- * - loadContext (fetch userProfile, subscriptionStatus, onboardingComplete)
- * - initializeApp (analytics, register fake realtime listener - side effects only, no context updates)
+ * - loadContext: fetch user data and other app-specific data
+ * - initializeApp: post-authentication side-effects such as analytics, register fake realtime listener
  * - mapState (derives NEEDS_VERIFICATION | NEEDS_PASSWORD | NEEDS_ONBOARDING | NEEDS_SUBSCRIPTION | MAIN_APP)
  * - updateContext (used imperatively in components: UI buttons + subscription expiration timer in MainApp)
+ * - actions: pass auth actions to provider, use actions.signOut() in MainApp
  */
 
 import React from "react";
@@ -13,12 +14,13 @@ import {
   SupamachineProvider,
   useSupamachine,
   AuthStateStatus,
+  type AppState,
 } from "@inventbuild/supamachine";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./supabaseClient";
 
 // ---------------------------------------------------------------------------
-// Context: what loadContext fetches
+// Context: what loadContext fetches and returns
 // ---------------------------------------------------------------------------
 
 type AppContext = {
@@ -33,7 +35,7 @@ type AppContext = {
 };
 
 // ---------------------------------------------------------------------------
-// Custom derived states
+// The custom states for your app
 // ---------------------------------------------------------------------------
 
 type MyAppState =
@@ -44,7 +46,7 @@ type MyAppState =
   | { status: "APP_READY" };
 
 // ---------------------------------------------------------------------------
-// loadContext
+// loadContext: fetch user profile + subscription status from backend
 // ---------------------------------------------------------------------------
 
 async function loadContext(session: Session): Promise<AppContext> {
@@ -72,10 +74,14 @@ async function loadContext(session: Session): Promise<AppContext> {
 }
 
 // ---------------------------------------------------------------------------
-// mapState: derive in order
+// mapState: use your custom states
 // ---------------------------------------------------------------------------
 
-function mapState(snapshot: { status: string; session: Session; context: AppContext }): MyAppState {
+function mapState(snapshot: {
+  status: string;
+  session: Session;
+  context: AppContext;
+}): MyAppState {
   const { context: ctx } = snapshot;
 
   if (!ctx.emailVerified) return { status: "NEEDS_VERIFICATION" };
@@ -135,7 +141,7 @@ function Login() {
 }
 
 function NeedsVerification() {
-  const { updateContext } = useSupamachine<AppContext, MyAppState>();
+  const { state, updateContext } = useSupamachine<AppContext, MyAppState>();
 
   const verify = () => {
     updateContext((ctx) => ({ ...ctx, emailVerified: true }));
@@ -144,14 +150,16 @@ function NeedsVerification() {
   return (
     <div>
       <StatusBar status="NEEDS_VERIFICATION" />
-      <p>Verify your email.</p>
+      <p>
+        Verify your email{state.context?.userData?.email ? ` (${state.context.userData.email})` : ""}.
+      </p>
       <button onClick={verify}>Mark email verified</button>
     </div>
   );
 }
 
 function NeedsPassword() {
-  const { updateContext } = useSupamachine<AppContext, MyAppState>();
+  const { state, updateContext } = useSupamachine<AppContext, MyAppState>();
 
   const setPassword = () => {
     updateContext((ctx) => ({ ...ctx, passwordSet: true }));
@@ -160,7 +168,7 @@ function NeedsPassword() {
   return (
     <div>
       <StatusBar status="NEEDS_PASSWORD" />
-      <p>Set your password.</p>
+      <p>Set your password{state.context?.userData?.name ? `, ${state.context.userData.name}` : ""}.</p>
       <button onClick={setPassword}>Mark password set</button>
     </div>
   );
@@ -198,31 +206,37 @@ function NeedsSubscription() {
   );
 }
 
-function MainApp() {
-  const { state, updateContext } = useSupamachine<AppContext, MyAppState>();
-  const session = state.status === "APP_READY" ? state.session : null;
+function Error() {
+  const { state } = useSupamachine<AppContext, MyAppState>();
+  const error = "error" in state ? state.error : null;
+  return (
+    <div>
+      <StatusBar status={state.status} />
+      <p>An error occurred{error?.message ? `: ${error.message}` : ""}.</p>
+    </div>
+  );
+}
 
-  // Subscription expiration: imperatively via updateContext in a component.
-  // (initializeApp is for side effects only; context updates happen here.)
-  React.useEffect(() => {
-    const timer = setTimeout(() => {
-      console.log("[MainApp] Subscription expired (5s timer)");
-      updateContext((ctx) => ({ ...ctx, subscriptionActive: false }));
-    }, 5000);
-    return () => clearTimeout(timer);
-  }, [updateContext]);
+function MainApp() {
+  const { state, updateContext, actions } = useSupamachine<AppContext, MyAppState>();
 
   const expireSubscription = () => {
     updateContext((ctx) => ({ ...ctx, subscriptionActive: false }));
   };
 
+  const session = "session" in state ? state.session : null;
+  const displayName = state.context?.userData?.name ?? state.context?.userData?.email ?? session?.user?.email ?? "User";
+
   return (
     <div>
       <StatusBar status="APP_READY" />
-      <p>Welcome! Full access. Session: {session?.user.email}</p>
-      <button onClick={expireSubscription}>
-        Simulate subscription expiration
-      </button>
+      <p>Welcome, {displayName}! Full access.</p>
+      <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+        <button onClick={expireSubscription}>
+          Simulate subscription expiration
+        </button>
+        <button onClick={() => actions.signOut()}>Sign out</button>
+      </div>
     </div>
   );
 }
@@ -230,6 +244,19 @@ function MainApp() {
 function AuthSwitch() {
   const { state } = useSupamachine<AppContext, MyAppState>();
 
+  return (
+    <>
+      {state.context && (
+        <div style={{ padding: "6px 12px", background: "#e8f4e8", marginBottom: 12 }}>
+          Signed in as <strong>{state.context.userData?.name ?? state.context.userData?.email ?? "User"}</strong>
+        </div>
+      )}
+      {renderContent(state)}
+    </>
+  );
+}
+
+function renderContent(state: AppState<AppContext, MyAppState>) {
   switch (state.status) {
     case AuthStateStatus.CHECKING:
     case AuthStateStatus.CONTEXT_LOADING:
@@ -248,7 +275,7 @@ function AuthSwitch() {
     case "APP_READY":
       return <MainApp />;
     default:
-      return <Loading />;
+      return <Error />;
   }
 }
 
@@ -263,6 +290,9 @@ export function App() {
       loadContext={loadContext}
       initializeApp={initializeApp}
       mapState={mapState}
+      actions={{
+        signOut: () => supabase.auth.signOut(),
+      }}
       options={{ logLevel: "debug" }}
     >
       <AuthSwitch />

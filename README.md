@@ -30,6 +30,10 @@ const {
 
 Supamachine models auth as an explicit state machine with clear states (CHECKING, SIGNED_OUT, CONTEXT_LOADING, INITIALIZING, AUTH_READY, plus error states) and allows you to derive custom app states via `mapState`.
 
+## Real-World Benefits
+
+When I moved a client project from my original AuthContext to Supamachine, Supamachine turned ~300 lines of lifecycle orchestration (session management, auth state changes, post-login flow, navigation decisions) into ~50 lines of configuration (loadContext, initializeApp, mapState).
+
 ## Usage
 
 `pnpm add @inventbuild/supamachine`
@@ -37,7 +41,11 @@ Supamachine models auth as an explicit state machine with clear states (CHECKING
 ### Basic setup
 
 ```tsx
-import { SupamachineProvider, useSupamachine, AuthStateStatus } from "@inventbuild/supamachine";
+import {
+  SupamachineProvider,
+  useSupamachine,
+  AuthStateStatus,
+} from "@inventbuild/supamachine";
 
 type MyContext = { userData: { name: string } };
 type MyAppState = { status: "MAIN_APP"; session: Session; context: MyContext };
@@ -46,7 +54,11 @@ return (
   <SupamachineProvider<MyContext, MyAppState>
     supabase={supabase}
     loadContext={async (session) => {
-      const { data } = await supabase.from("profiles").select("*").eq("id", session.user.id).single();
+      const { data } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", session.user.id)
+        .single();
       return { userData: data };
     }}
     mapState={(snapshot) => ({
@@ -82,14 +94,39 @@ function App() {
 - **loadContext(session)** – Optional. Fetches app context (e.g. user profile) after auth
 - **initializeApp({ session, context })** – Optional. Side effects after context is loaded (e.g. set avatar)
 - **mapState(snapshot)** – Optional. Maps the internal AUTH_READY state to your custom app states
+- **actions** – Optional. Auth actions (signIn, signOut, etc.) to expose via `useSupamachine()`. Merged with a default `signOut` so you always have `actions.signOut()` available.
 - **options** – Optional. `logLevel`, `getSessionTimeoutMs`, `loadContextTimeoutMs`, `initializeAppTimeoutMs`
+
+### actions
+
+This is an optional convenience for your imperative Supabase auth methods, like signInWith... and signOut, etc. Pass your auth actions to the provider; they're exposed via `useSupamachine().actions`. Since Supamachine responds to Supabase events, you don't need to use updateContext. A default `signOut` is included since it's simple (but can be overriden). Example usage:
+
+```tsx
+<SupamachineProvider
+  supabase={supabase}
+  actions={{
+    signOut: () => supabase.auth.signOut(),
+    signInWithOtp: (email) => supabase.auth.signInWithOtp({ email }),
+    signInWithGoogle: () => { /* platform-specific */ },
+  }}
+>
+```
+
+```ts
+const { state, actions } = useSupamachine();
+actions.signOut();
+actions.signInWithOtp("user@example.com");
+```
+
+If you omit `actions`, you still get `actions.signOut()` from the default.
 
 ### updateContext
 
 Use `updateContext` to imperatively update context and trigger a re-run of `mapState`:
 
 ```ts
-supamachine.updateContext((current) => ({
+const { updateContext } = useSupamachine();
+updateContext((current) => ({
   ...current,
   userData: { ...current.userData, onboardingComplete: true },
 }));
@@ -97,4 +134,4 @@ supamachine.updateContext((current) => ({
 
 ## Philosophy
 
-Handling auth in your app is all about _states._ Supamachine explicitly defines every possible state (CHECKING, SIGNED_OUT, CONTEXT_LOADING, INITIALIZING, AUTH_READY, ERROR_*) and lets you extend with custom states via `mapState`. By capturing all states and transitions, edge cases are handled deterministically.
+Handling auth in your app is all about _states._ Supamachine explicitly defines every possible state (CHECKING, SIGNED*OUT, CONTEXT_LOADING, INITIALIZING, AUTH_READY, ERROR*\*) and lets you extend with custom states via `mapState`. By capturing all states and transitions, edge cases are handled deterministically.

@@ -2,6 +2,7 @@ import React, {
   createContext,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -9,7 +10,7 @@ import { SupamachineCore } from "../core/runtime";
 import { attachSupabase } from "../supabase/adapter";
 import { AuthEventType } from "../core/constants";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { SupamachineProviderProps } from "../core/types";
+import type { SupamachineProviderProps, SupamachineActions } from "../core/types";
 import { parseLogLevel, LogLevel } from "../core/logger";
 
 export type SupamachineOptions = {
@@ -20,31 +21,59 @@ export type SupamachineOptions = {
   logLevel?: "none" | "error" | "warn" | "info" | "debug";
 };
 
-export interface SupamachineProviderPropsWithSupabase<C, D extends { status: string } | void = void>
-  extends SupamachineProviderProps<C, D> {
+export interface SupamachineProviderPropsWithSupabase<
+  C,
+  D extends { status: string } | void = void,
+  A extends Record<string, (...args: any[]) => any> = Record<string, (...args: any[]) => any>,
+> extends SupamachineProviderProps<C, D, A> {
   supabase: SupabaseClient;
 }
 
-export interface SupamachineContextValue<C, D extends { status: string } | void = void> {
+export interface SupamachineContextValue<
+  C,
+  D extends { status: string } | void = void,
+  A extends Record<string, (...args: any[]) => any> = Record<string, (...args: any[]) => any>,
+> {
   state: import("../core/types").AppState<C, D>;
   updateContext: (updater: (current: C) => C | Promise<C>) => Promise<void>;
+  actions: SupamachineActions<A>;
 }
 
-const SupamachineContext = createContext<SupamachineContextValue<unknown, { status: string }> | null>(
-  null,
-);
+const defaultSignOut = (supabase: SupabaseClient) => () => {
+  void supabase.auth.signOut();
+};
 
-export function SupamachineProvider<C, D extends { status: string } | void = void>({
+const SupamachineContext = createContext<SupamachineContextValue<
+  unknown,
+  { status: string },
+  Record<string, (...args: any[]) => any>
+> | null>(null);
+
+export function SupamachineProvider<
+  C,
+  D extends { status: string } | void = void,
+  A extends Record<string, (...args: any[]) => any> = Record<string, (...args: any[]) => any>,
+>({
   supabase,
   loadContext,
   mapState,
   initializeApp,
+  actions: userActions,
   children,
   options: opts = {},
-}: SupamachineProviderPropsWithSupabase<C, D> & { options?: SupamachineOptions }) {
+}: SupamachineProviderPropsWithSupabase<C, D, A> & { options?: SupamachineOptions }) {
   const coreRef = useRef<SupamachineCore<C, D> | null>(null);
   const unsubAdapterRef = useRef<(() => void) | null>(null);
-  const [contextValue, setContextValue] = useState<SupamachineContextValue<C, D> | null>(null);
+  const [contextValue, setContextValue] = useState<SupamachineContextValue<C, D, A> | null>(null);
+
+  const actions = useMemo(
+    () =>
+      ({
+        signOut: defaultSignOut(supabase),
+        ...userActions,
+      }) as SupamachineActions<A>,
+    [supabase, userActions],
+  );
 
   const logLevel =
     typeof opts.logLevel === "string" ? parseLogLevel(opts.logLevel) : opts.logLevel ?? LogLevel.WARN;
@@ -67,6 +96,7 @@ export function SupamachineProvider<C, D extends { status: string } | void = voi
     setContextValue({
       state: coreRef.current.getAppState(),
       updateContext: (updater) => coreRef.current!.updateContext(updater),
+      actions,
     });
   }
 
@@ -76,29 +106,36 @@ export function SupamachineProvider<C, D extends { status: string } | void = voi
       setContextValue({
         state: core.getAppState(),
         updateContext: (updater) => core.updateContext(updater),
+        actions,
       });
     });
     return () => {
       unsubscribe();
       unsubAdapterRef.current?.();
     };
-  }, []);
+  }, [actions]);
 
   if (!contextValue) {
     return null;
   }
 
   return (
-    <SupamachineContext.Provider value={contextValue as SupamachineContextValue<unknown, { status: string }>}>
+    <SupamachineContext.Provider
+      value={contextValue as SupamachineContextValue<unknown, { status: string }, Record<string, (...args: any[]) => any>>}
+    >
       {children}
     </SupamachineContext.Provider>
   );
 }
 
-export function useSupamachine<C, D extends { status: string } | void = void>() {
+export function useSupamachine<
+  C,
+  D extends { status: string } | void = void,
+  A extends Record<string, (...args: any[]) => any> = Record<string, (...args: any[]) => any>,
+>() {
   const ctx = useContext(SupamachineContext);
   if (!ctx) {
     throw new Error("useSupamachine must be used within SupamachineProvider");
   }
-  return ctx as SupamachineContextValue<C, D>;
+  return ctx as SupamachineContextValue<C, D, A>;
 }
