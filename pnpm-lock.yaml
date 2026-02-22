@@ -8,22 +8,16 @@ importers:
 
   .:
     dependencies:
-      '@inventbuild/supamachine':
-        specifier: link:../../Library/pnpm/global/5/node_modules/@inventbuild/supamachine
-        version: link:../../Library/pnpm/global/5/node_modules/@inventbuild/supamachine
       react:
-        specifier: ^18.0.0
+        specifier: '>=18.0.0 <20'
         version: 18.3.1
-      supamachine:
-        specifier: link:../../Library/pnpm/global/5/node_modules/supamachine
-        version: link:../../Library/pnpm/global/5/node_modules/supamachine
     devDependencies:
       '@supabase/supabase-js':
         specifier: ^2.0.0
         version: 2.97.0
       '@types/react':
-        specifier: ^18.0.0
-        version: 18.3.28
+        specifier: ^19.0.0
+        version: 19.2.14
       prettier:
         specifier: ^3.8.1
         version: 3.8.1
@@ -652,6 +646,9 @@ packages:
 
   '@types/react@18.3.28':
     resolution: {integrity: sha512-z9VXpC7MWrhfWipitjNdgCauoMLRdIILQsAEV+ZesIzBq/oUlxk0m3ApZuMFCXdnS4U7KrI+l3WRUEGQ8K1QKw==}
+
+  '@types/react@19.2.14':
+    resolution: {integrity: sha512-ilcTH/UniCkMdtexkoCN0bI7pMcJDvmQFPvuPvmEaYA/NSfFTAgdUSLAoVjaRJm7+6PvcM+q1zYOwS4wTYMF9w==}
 
   '@types/ws@8.18.1':
     resolution: {integrity: sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg==}
@@ -1469,6 +1466,10 @@ snapshots:
   '@types/react@18.3.28':
     dependencies:
       '@types/prop-types': 15.7.15
+      csstype: 3.2.3
+
+  '@types/react@19.2.14':
+    dependencies:
       csstype: 3.2.3
 
   '@types/ws@8.18.1':
