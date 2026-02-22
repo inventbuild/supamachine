@@ -1,6 +1,6 @@
 {
   "name": "@inventbuild/supamachine",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "description": "Deterministic auth state machine for Supabase apps",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
