@@ -1,7 +1,5 @@
 # Supamachine
 
-> Warning: under active development
-
 A deterministic authentication state machine for Supabase web and mobile apps.
 
 This is an early-stage library designed to make authentication easier and way less error-prone, especially as your app grows in complexity.
