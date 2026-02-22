@@ -162,6 +162,9 @@ export function reducer<C>(
             };
           }
           break;
+        case AuthEventType.AUTH_INITIATED:
+          next = { status: AuthStateStatus.AUTHENTICATING, context: NO_CONTEXT };
+          break;
         default:
           return invalidTransition(state, event) as CoreState<C>;
       }
