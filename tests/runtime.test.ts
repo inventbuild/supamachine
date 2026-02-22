@@ -20,7 +20,7 @@ describe("SupamachineCore", () => {
     });
 
     core.dispatch({ type: E.START });
-    expect(core.getSnapshot().status).toBe(S.CHECKING);
+    expect(core.getSnapshot().status).toBe(S.CHECKING_SESSION);
 
     core.dispatch({ type: E.AUTH_CHANGED, session });
     expect(core.getSnapshot().status).toBe(S.CONTEXT_LOADING);

@@ -31,7 +31,7 @@ function AuthSwitch() {
   const { state } = useSupamachine<MyContext>();
 
   switch (state.status) {
-    case AuthStateStatus.CHECKING:
+    case AuthStateStatus.CHECKING_SESSION:
     case AuthStateStatus.CONTEXT_LOADING:
       return <Loading />;
     case AuthStateStatus.SIGNED_OUT:

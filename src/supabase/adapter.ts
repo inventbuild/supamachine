@@ -26,7 +26,7 @@ export function attachSupabase<C, D>(
     .then(({ data, error }) => {
       if (error) {
         core.dispatch({
-          type: AuthEventType.ERROR_CHECKING,
+          type: AuthEventType.ERROR_CHECKING_SESSION,
           error: new Error(error.message),
         });
       } else {
@@ -38,7 +38,7 @@ export function attachSupabase<C, D>(
     })
     .catch((error) => {
       core.dispatch({
-        type: AuthEventType.ERROR_CHECKING,
+        type: AuthEventType.ERROR_CHECKING_SESSION,
         error: error instanceof Error ? error : new Error(String(error)),
       });
     });

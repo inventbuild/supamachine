@@ -258,7 +258,7 @@ function AuthSwitch() {
 
 function renderContent(state: AppState<AppContext, MyAppState>) {
   switch (state.status) {
-    case AuthStateStatus.CHECKING:
+    case AuthStateStatus.CHECKING_SESSION:
     case AuthStateStatus.CONTEXT_LOADING:
     case AuthStateStatus.INITIALIZING:
       return <Loading />;

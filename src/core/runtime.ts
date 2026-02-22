@@ -8,6 +8,7 @@ import { createLogger, type LogLevel } from "./logger";
 
 const DEFAULT_LOAD_CONTEXT_TIMEOUT_MS = 10_000;
 const DEFAULT_INITIALIZE_APP_TIMEOUT_MS = 30_000;
+const DEFAULT_AUTHENTICATING_TIMEOUT_MS = 30_000;
 
 export interface RuntimeOptions<C, D> {
   loadContext?: (session: Session) => Promise<C>;
@@ -18,6 +19,7 @@ export interface RuntimeOptions<C, D> {
   }) => void | Promise<void>;
   loadContextTimeoutMs?: number;
   initializeAppTimeoutMs?: number;
+  authenticatingTimeoutMs?: number;
   logLevel?: LogLevel;
 }
 
@@ -50,11 +52,13 @@ export class SupamachineCore<C, D> {
     context: null,
   };
   private sessionForLoading: Session | null = null;
+  private authenticatingTimer: ReturnType<typeof setTimeout> | null = null;
   private listeners = new Set<
     (coreState: CoreState<C>, appState: AppState<C, D>) => void
   >();
   private loadContextTimeoutMs: number;
   private initializeAppTimeoutMs: number;
+  private authenticatingTimeoutMs: number;
   private log: ReturnType<typeof createLogger>;
 
   constructor(private readonly options: RuntimeOptions<C, D>) {
@@ -62,6 +66,8 @@ export class SupamachineCore<C, D> {
       options.loadContextTimeoutMs ?? DEFAULT_LOAD_CONTEXT_TIMEOUT_MS;
     this.initializeAppTimeoutMs =
       options.initializeAppTimeoutMs ?? DEFAULT_INITIALIZE_APP_TIMEOUT_MS;
+    this.authenticatingTimeoutMs =
+      options.authenticatingTimeoutMs ?? DEFAULT_AUTHENTICATING_TIMEOUT_MS;
     const level = options.logLevel ?? 2;
     this.log = createLogger("core", level);
     setReducerLogLevel(level);
@@ -87,6 +93,14 @@ export class SupamachineCore<C, D> {
     }
   }
 
+  beginAuth() {
+    this.dispatch({ type: AuthEventType.AUTH_INITIATED });
+  }
+
+  cancelAuth() {
+    this.dispatch({ type: AuthEventType.AUTH_CANCELLED });
+  }
+
   dispatch(event: AuthEvent<C>) {
     const prevState = this.state;
     this.state = reducer<C>(this.state, event);
@@ -96,6 +110,26 @@ export class SupamachineCore<C, D> {
     }
 
     this.emit();
+
+    // AUTHENTICATING timeout management
+    if (
+      this.state.status === AuthStateStatus.AUTHENTICATING &&
+      prevState.status !== AuthStateStatus.AUTHENTICATING
+    ) {
+      this.authenticatingTimer = setTimeout(() => {
+        this.log.warn("authenticating timeout — cancelling");
+        this.dispatch({ type: AuthEventType.AUTH_CANCELLED });
+      }, this.authenticatingTimeoutMs);
+    }
+    if (
+      prevState.status === AuthStateStatus.AUTHENTICATING &&
+      this.state.status !== AuthStateStatus.AUTHENTICATING
+    ) {
+      if (this.authenticatingTimer) {
+        clearTimeout(this.authenticatingTimer);
+        this.authenticatingTimer = null;
+      }
+    }
 
     if (
       this.state.status === AuthStateStatus.CONTEXT_LOADING &&

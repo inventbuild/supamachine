@@ -8,25 +8,26 @@ const session = { user: { id: "u1" } } as Session;
 
 describe("reducer", () => {
   beforeEach(() => setReducerLogLevel(LogLevel.NONE));
+
   // --- Happy path ---
-  it("START + START → CHECKING", () => {
+  it("START + START → CHECKING_SESSION", () => {
     const next = reducer({ status: S.START, context: null }, { type: E.START });
-    expect(next.status).toBe(S.CHECKING);
+    expect(next.status).toBe(S.CHECKING_SESSION);
     expect(next).toHaveProperty("context", null);
   });
 
-  it("CHECKING + AUTH_CHANGED(session) → CONTEXT_LOADING", () => {
+  it("CHECKING_SESSION + AUTH_CHANGED(session) → CONTEXT_LOADING", () => {
     const next = reducer(
-      { status: S.CHECKING, context: null },
+      { status: S.CHECKING_SESSION, context: null },
       { type: E.AUTH_CHANGED, session },
     );
     expect(next.status).toBe(S.CONTEXT_LOADING);
     expect(next).toHaveProperty("session", session);
   });
 
-  it("CHECKING + AUTH_CHANGED(null) → SIGNED_OUT", () => {
+  it("CHECKING_SESSION + AUTH_CHANGED(null) → SIGNED_OUT", () => {
     const next = reducer(
-      { status: S.CHECKING, context: null },
+      { status: S.CHECKING_SESSION, context: null },
       { type: E.AUTH_CHANGED, session: null },
     );
     expect(next.status).toBe(S.SIGNED_OUT);
@@ -70,20 +71,20 @@ describe("reducer", () => {
   });
 
   // --- Error paths ---
-  it("CHECKING + ERROR_CHECKING → ERROR_CHECKING with error", () => {
+  it("CHECKING_SESSION + ERROR_CHECKING_SESSION → ERROR_CHECKING_SESSION with error", () => {
     const err = new Error("network");
     const next = reducer(
-      { status: S.CHECKING, context: null },
-      { type: E.ERROR_CHECKING, error: err },
+      { status: S.CHECKING_SESSION, context: null },
+      { type: E.ERROR_CHECKING_SESSION, error: err },
     );
-    expect(next.status).toBe(S.ERROR_CHECKING);
+    expect(next.status).toBe(S.ERROR_CHECKING_SESSION);
     expect(next).toHaveProperty("error", err);
   });
 
   // --- Recovery from error states ---
-  it("ERROR_CHECKING + AUTH_CHANGED(session) → CONTEXT_LOADING", () => {
+  it("ERROR_CHECKING_SESSION + AUTH_CHANGED(session) → CONTEXT_LOADING", () => {
     const next = reducer(
-      { status: S.ERROR_CHECKING, error: new Error("x"), context: null },
+      { status: S.ERROR_CHECKING_SESSION, error: new Error("x"), context: null },
       { type: E.AUTH_CHANGED, session },
     );
     expect(next.status).toBe(S.CONTEXT_LOADING);
@@ -112,5 +113,53 @@ describe("reducer", () => {
     );
     expect(next.status).toBe(S.CONTEXT_LOADING);
     expect(next).toHaveProperty("session", newSession);
+  });
+
+  // --- AUTHENTICATING state ---
+  it("SIGNED_OUT + AUTH_INITIATED → AUTHENTICATING", () => {
+    const next = reducer(
+      { status: S.SIGNED_OUT, context: null },
+      { type: E.AUTH_INITIATED },
+    );
+    expect(next.status).toBe(S.AUTHENTICATING);
+  });
+
+  it("AUTHENTICATING + AUTH_CHANGED(session) → CONTEXT_LOADING", () => {
+    const next = reducer(
+      { status: S.AUTHENTICATING, context: null },
+      { type: E.AUTH_CHANGED, session },
+    );
+    expect(next.status).toBe(S.CONTEXT_LOADING);
+    expect(next).toHaveProperty("session", session);
+  });
+
+  it("AUTHENTICATING + AUTH_CHANGED(null) → SIGNED_OUT", () => {
+    const next = reducer(
+      { status: S.AUTHENTICATING, context: null },
+      { type: E.AUTH_CHANGED, session: null },
+    );
+    expect(next.status).toBe(S.SIGNED_OUT);
+  });
+
+  it("AUTHENTICATING + AUTH_CANCELLED → SIGNED_OUT", () => {
+    const next = reducer(
+      { status: S.AUTHENTICATING, context: null },
+      { type: E.AUTH_CANCELLED },
+    );
+    expect(next.status).toBe(S.SIGNED_OUT);
+  });
+
+  it("ERROR_CHECKING_SESSION + AUTH_INITIATED → AUTHENTICATING", () => {
+    const next = reducer(
+      { status: S.ERROR_CHECKING_SESSION, error: new Error("x"), context: null },
+      { type: E.AUTH_INITIATED },
+    );
+    expect(next.status).toBe(S.AUTHENTICATING);
+  });
+
+  it("AUTH_INITIATED from non-SIGNED_OUT/non-error is invalid", () => {
+    const state = { status: S.AUTH_READY, session, context: {} } as const;
+    const next = reducer(state, { type: E.AUTH_INITIATED });
+    expect(next).toBe(state);
   });
 });

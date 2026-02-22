@@ -7,13 +7,17 @@ export type AuthEvent<C> =
   // Auth state update (initial resolution or subsequent change)
   | { type: typeof AuthEventType.AUTH_CHANGED; session: Session | null }
 
+  // App-initiated auth signals
+  | { type: typeof AuthEventType.AUTH_INITIATED }
+  | { type: typeof AuthEventType.AUTH_CANCELLED }
+
   // Context resolution
-  | { type: "CONTEXT_RESOLVED"; context: C }
+  | { type: typeof AuthEventType.CONTEXT_RESOLVED; context: C }
 
   // Initialization
-  | { type: "INITIALIZED" }
+  | { type: typeof AuthEventType.INITIALIZED }
 
   // Errors
-  | { type: "ERROR_CHECKING"; error: Error }
-  | { type: "ERROR_CONTEXT"; error: Error }
-  | { type: "ERROR_INITIALIZING"; error: Error };
+  | { type: typeof AuthEventType.ERROR_CHECKING_SESSION; error: Error }
+  | { type: typeof AuthEventType.ERROR_CONTEXT; error: Error }
+  | { type: typeof AuthEventType.ERROR_INITIALIZING; error: Error };

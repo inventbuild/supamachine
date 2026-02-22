@@ -8,8 +8,9 @@ import { AuthStateStatus } from "./constants";
 
 type DisallowedStatuses =
   | typeof AuthStateStatus.START
-  | typeof AuthStateStatus.CHECKING
-  | typeof AuthStateStatus.ERROR_CHECKING
+  | typeof AuthStateStatus.CHECKING_SESSION
+  | typeof AuthStateStatus.AUTHENTICATING
+  | typeof AuthStateStatus.ERROR_CHECKING_SESSION
   | typeof AuthStateStatus.SIGNED_OUT
   | typeof AuthStateStatus.CONTEXT_LOADING
   | typeof AuthStateStatus.ERROR_CONTEXT
@@ -73,5 +74,7 @@ export type UseSupamachineReturn<
 > = {
   state: AppState<C, D>;
   updateContext: (updater: (current: C) => C | Promise<C>) => Promise<void>;
+  beginAuth: () => void;
+  cancelAuth: () => void;
   actions: SupamachineActions<A>;
 };

@@ -30,14 +30,14 @@ export function reducer<C>(
     case AuthStateStatus.START:
       switch (event.type) {
         case AuthEventType.START:
-          next = { status: AuthStateStatus.CHECKING, context: NO_CONTEXT };
+          next = { status: AuthStateStatus.CHECKING_SESSION, context: NO_CONTEXT };
           break;
         default:
           return invalidTransition(state, event) as CoreState<C>;
       }
       break;
 
-    case AuthStateStatus.CHECKING:
+    case AuthStateStatus.CHECKING_SESSION:
       switch (event.type) {
         case AuthEventType.AUTH_CHANGED:
           if (event.session) {
@@ -50,12 +50,33 @@ export function reducer<C>(
             next = { status: AuthStateStatus.SIGNED_OUT, context: NO_CONTEXT };
           }
           break;
-        case AuthEventType.ERROR_CHECKING:
+        case AuthEventType.ERROR_CHECKING_SESSION:
           next = {
-            status: AuthStateStatus.ERROR_CHECKING,
+            status: AuthStateStatus.ERROR_CHECKING_SESSION,
             error: event.error,
             context: NO_CONTEXT,
           };
+          break;
+        default:
+          return invalidTransition(state, event) as CoreState<C>;
+      }
+      break;
+
+    case AuthStateStatus.AUTHENTICATING:
+      switch (event.type) {
+        case AuthEventType.AUTH_CHANGED:
+          if (event.session) {
+            next = {
+              status: AuthStateStatus.CONTEXT_LOADING,
+              session: event.session,
+              context: NO_CONTEXT,
+            };
+          } else {
+            next = { status: AuthStateStatus.SIGNED_OUT, context: NO_CONTEXT };
+          }
+          break;
+        case AuthEventType.AUTH_CANCELLED:
+          next = { status: AuthStateStatus.SIGNED_OUT, context: NO_CONTEXT };
           break;
         default:
           return invalidTransition(state, event) as CoreState<C>;
@@ -159,12 +180,35 @@ export function reducer<C>(
             next = state;
           }
           break;
+        case AuthEventType.AUTH_INITIATED:
+          next = { status: AuthStateStatus.AUTHENTICATING, context: NO_CONTEXT };
+          break;
         default:
           return invalidTransition(state, event) as CoreState<C>;
       }
       break;
 
-    case AuthStateStatus.ERROR_CHECKING:
+    case AuthStateStatus.ERROR_CHECKING_SESSION:
+      switch (event.type) {
+        case AuthEventType.AUTH_CHANGED:
+          if (event.session) {
+            next = {
+              status: AuthStateStatus.CONTEXT_LOADING,
+              session: event.session,
+              context: NO_CONTEXT,
+            };
+          } else {
+            next = { status: AuthStateStatus.SIGNED_OUT, context: NO_CONTEXT };
+          }
+          break;
+        case AuthEventType.AUTH_INITIATED:
+          next = { status: AuthStateStatus.AUTHENTICATING, context: NO_CONTEXT };
+          break;
+        default:
+          return invalidTransition(state, event) as CoreState<C>;
+      }
+      break;
+
     case AuthStateStatus.ERROR_CONTEXT:
     case AuthStateStatus.ERROR_INITIALIZING:
       switch (event.type) {

@@ -1,5 +1,6 @@
 import React, {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -17,6 +18,7 @@ export type SupamachineOptions = {
   getSessionTimeoutMs?: number;
   loadContextTimeoutMs?: number;
   initializeAppTimeoutMs?: number;
+  authenticatingTimeoutMs?: number;
   /** 'none' | 'error' | 'warn' | 'info' | 'debug'. Default: 'warn'. Uses [Supamachine][subsystem] format. */
   logLevel?: "none" | "error" | "warn" | "info" | "debug";
 };
@@ -36,6 +38,8 @@ export interface SupamachineContextValue<
 > {
   state: import("../core/types").AppState<C, D>;
   updateContext: (updater: (current: C) => C | Promise<C>) => Promise<void>;
+  beginAuth: () => void;
+  cancelAuth: () => void;
   actions: SupamachineActions<A>;
 }
 
@@ -85,6 +89,7 @@ export function SupamachineProvider<
       initializeApp,
       loadContextTimeoutMs: opts.loadContextTimeoutMs,
       initializeAppTimeoutMs: opts.initializeAppTimeoutMs,
+      authenticatingTimeoutMs: opts.authenticatingTimeoutMs,
       logLevel,
     });
     unsubAdapterRef.current = attachSupabase(coreRef.current, supabase, {
@@ -92,10 +97,22 @@ export function SupamachineProvider<
       logLevel,
     });
     coreRef.current.dispatch({ type: AuthEventType.START });
+  }
 
+  // Stable references — coreRef.current is set once and never changes
+  const updateContext = useCallback(
+    (updater: (current: C) => C | Promise<C>) => coreRef.current!.updateContext(updater),
+    [],
+  );
+  const beginAuth = useCallback(() => coreRef.current!.beginAuth(), []);
+  const cancelAuth = useCallback(() => coreRef.current!.cancelAuth(), []);
+
+  if (!contextValue) {
     setContextValue({
       state: coreRef.current.getAppState(),
-      updateContext: (updater) => coreRef.current!.updateContext(updater),
+      updateContext,
+      beginAuth,
+      cancelAuth,
       actions,
     });
   }
@@ -105,7 +122,9 @@ export function SupamachineProvider<
     const unsubscribe = core.subscribe(() => {
       setContextValue({
         state: core.getAppState(),
-        updateContext: (updater) => core.updateContext(updater),
+        updateContext,
+        beginAuth,
+        cancelAuth,
         actions,
       });
     });
@@ -113,7 +132,7 @@ export function SupamachineProvider<
       unsubscribe();
       unsubAdapterRef.current?.();
     };
-  }, [actions]);
+  }, [actions, updateContext, beginAuth, cancelAuth]);
 
   if (!contextValue) {
     return null;
