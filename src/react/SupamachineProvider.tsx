@@ -38,6 +38,7 @@ export interface SupamachineContextValue<
 > {
   state: import("../core/types").AppState<C, D>;
   updateContext: (updater: (current: C) => C | Promise<C>) => Promise<void>;
+  refreshContext: (session: import("@supabase/supabase-js").Session) => Promise<void>;
   beginAuth: () => void;
   cancelAuth: () => void;
   actions: SupamachineActions<A>;
@@ -104,6 +105,10 @@ export function SupamachineProvider<
     (updater: (current: C) => C | Promise<C>) => coreRef.current!.updateContext(updater),
     [],
   );
+  const refreshContext = useCallback(
+    (session: import("@supabase/supabase-js").Session) => coreRef.current!.refreshContext(session),
+    [],
+  );
   const beginAuth = useCallback(() => coreRef.current!.beginAuth(), []);
   const cancelAuth = useCallback(() => coreRef.current!.cancelAuth(), []);
 
@@ -111,6 +116,7 @@ export function SupamachineProvider<
     setContextValue({
       state: coreRef.current.getAppState(),
       updateContext,
+      refreshContext,
       beginAuth,
       cancelAuth,
       actions,
@@ -123,6 +129,7 @@ export function SupamachineProvider<
       setContextValue({
         state: core.getAppState(),
         updateContext,
+        refreshContext,
         beginAuth,
         cancelAuth,
         actions,
@@ -132,7 +139,7 @@ export function SupamachineProvider<
       unsubscribe();
       unsubAdapterRef.current?.();
     };
-  }, [actions, updateContext, beginAuth, cancelAuth]);
+  }, [actions, updateContext, refreshContext, beginAuth, cancelAuth]);
 
   if (!contextValue) {
     return null;

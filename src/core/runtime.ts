@@ -93,6 +93,26 @@ export class SupamachineCore<C, D> {
     }
   }
 
+  async refreshContext(session: Session): Promise<void> {
+    if (this.state.status !== AuthStateStatus.AUTH_READY) {
+      return;
+    }
+    const { loadContext } = this.options;
+    if (!loadContext) {
+      this.state = { ...this.state, session };
+      this.emit();
+      return;
+    }
+    try {
+      this.log.debug("refreshContext: reloading context in place");
+      const context = await loadContext(session);
+      this.state = { ...this.state, session, context };
+      this.emit();
+    } catch (error) {
+      this.log.error("refreshContext: loadContext failed", error);
+    }
+  }
+
   beginAuth() {
     this.dispatch({ type: AuthEventType.AUTH_INITIATED });
   }

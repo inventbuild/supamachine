@@ -73,7 +73,7 @@ function App() {
   const { state, updateContext } = useSupamachine<MyContext, MyAppState>();
 
   switch (state.status) {
-    case AuthStateStatus.CHECKING:
+    case AuthStateStatus.CHECKING_SESSION:
     case AuthStateStatus.CONTEXT_LOADING:
       return <Loading />;
     case AuthStateStatus.SIGNED_OUT:
@@ -130,6 +130,10 @@ updateContext((current) => ({
 }));
 ```
 
+### refreshContext
+
+`refreshContext(session)` re-runs `loadContext` with a new session, updates context and session in place, re-runs `mapState`, and emits—without leaving AUTH_READY. The adapter uses it automatically for `USER_UPDATED` so metadata changes (e.g. from `updateUser`) don't trigger a full reload. Exposed via `useSupamachine()` if you need to call it manually.
+
 ## Philosophy
 
-Handling auth in your app is all about _states._ Supamachine explicitly defines every possible state (CHECKING, SIGNED*OUT, CONTEXT_LOADING, INITIALIZING, AUTH_READY, ERROR*\*) and lets you extend with custom states via `mapState`. By capturing all states and transitions, edge cases are handled deterministically.
+Handling auth in your app is all about _states._ Supamachine explicitly defines every possible state (CHECKING_SESSION, SIGNED_OUT, CONTEXT_LOADING, INITIALIZING, AUTH_READY, plus error states) and lets you extend with custom states via `mapState`. By capturing all states and transitions, edge cases are handled deterministically.

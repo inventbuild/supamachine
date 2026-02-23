@@ -51,13 +51,18 @@ export function attachSupabase<C, D>(
         break;
 
       case "SIGNED_IN":
-      case "USER_UPDATED":
       case "PASSWORD_RECOVERY":
       case "MFA_CHALLENGE_VERIFIED":
         core.dispatch({
           type: AuthEventType.AUTH_CHANGED,
           session: session ?? null,
         });
+        break;
+
+      case "USER_UPDATED":
+        if (session) {
+          void core.refreshContext(session);
+        }
         break;
 
       case "SIGNED_OUT":

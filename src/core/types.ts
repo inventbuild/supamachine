@@ -74,6 +74,7 @@ export type UseSupamachineReturn<
 > = {
   state: AppState<C, D>;
   updateContext: (updater: (current: C) => C | Promise<C>) => Promise<void>;
+  refreshContext: (session: Session) => Promise<void>;
   beginAuth: () => void;
   cancelAuth: () => void;
   actions: SupamachineActions<A>;
