@@ -2,6 +2,7 @@
 
 - Added `refreshContext()` method: re-runs `loadContext()` and replaces `session` and `context` while staying in the `AUTH_READY` state. `mapState()` is then triggered.
 - Changed response to the Supabase `USER_UPDATED` event to call `refreshContext()`
+- Added mermaid graph generator script
 
 # v0.3.2
 
