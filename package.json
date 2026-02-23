@@ -14,7 +14,7 @@
     "test:watch": "vitest",
     "flowchart": "npx tsx scripts/generate-flowchart.ts",
     "prepublishOnly": "npm run build",
-    "publish": "npm run build && npm publish --access public"
+    "publish": "npm run build && npm login && npm publish --access public"
   },
   "peerDependencies": {
     "@supabase/supabase-js": "^2.0.0",
