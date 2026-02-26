@@ -33,6 +33,36 @@ describe("SupamachineCore", () => {
     expect(initializeApp).toHaveBeenCalled();
   });
 
+  it("same-user AUTH_CHANGED after AUTH_READY does not restart pipeline", async () => {
+    const loadContext = vi.fn().mockResolvedValue({ role: "admin" });
+    const initializeApp = vi.fn().mockResolvedValue(undefined);
+
+    const core = new SupamachineCore({
+      loadContext,
+      initializeApp,
+      logLevel: 0,
+    });
+
+    core.dispatch({ type: E.START });
+    core.dispatch({ type: E.AUTH_CHANGED, session });
+
+    await vi.waitFor(() => {
+      expect(core.getSnapshot().status).toBe(S.AUTH_READY);
+    });
+
+    // Simulate TOKEN_REFRESHED / duplicate SIGNED_IN with same user id
+    const refreshedSession = { user: { id: "u1", tokenVersion: 2 } } as Session;
+    core.dispatch({ type: E.AUTH_CHANGED, session: refreshedSession });
+
+    // Give core time to potentially restart; it should stay AUTH_READY
+    await vi.waitFor(() => {
+      expect(core.getSnapshot().status).toBe(S.AUTH_READY);
+    });
+
+    expect(loadContext).toHaveBeenCalledTimes(1);
+    expect(initializeApp).toHaveBeenCalledTimes(1);
+  });
+
   it("loadContext failure → ERROR_CONTEXT", async () => {
     const core = new SupamachineCore({
       loadContext: () => Promise.reject(new Error("db down")),

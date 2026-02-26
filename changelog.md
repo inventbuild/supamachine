@@ -1,3 +1,7 @@
+# v0.4.1
+
+- Added additional test coverage for same-session fix
+
 # v0.4.0
 
 - Improve reducer to ignore AUTH_CHANGED events where the user and session are identical. This prevents re-running the entire pipeline unnecessarily.

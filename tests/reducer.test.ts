@@ -115,6 +115,42 @@ describe("reducer", () => {
     expect(next).toHaveProperty("session", newSession);
   });
 
+  it("CONTEXT_LOADING + AUTH_CHANGED(same session) → state unchanged", () => {
+    const state = {
+      status: S.CONTEXT_LOADING,
+      session,
+      context: null,
+    } as const;
+    const next = reducer(state, { type: E.AUTH_CHANGED, session });
+    expect(next).toBe(state);
+  });
+
+  it("INITIALIZING + AUTH_CHANGED(same session) → state unchanged", () => {
+    const ctx = { role: "admin" };
+    const state = {
+      status: S.INITIALIZING,
+      session,
+      context: ctx,
+    } as const;
+    const next = reducer(state, { type: E.AUTH_CHANGED, session });
+    expect(next).toBe(state);
+  });
+
+  it("AUTH_READY + AUTH_CHANGED(same session) → AUTH_READY with updated session only", () => {
+    const ctx = { role: "admin" };
+    const originalSession = { user: { id: "u1", foo: "bar" } } as Session;
+    const newerSession = { user: { id: "u1", foo: "baz" } } as Session;
+    const state = {
+      status: S.AUTH_READY,
+      session: originalSession,
+      context: ctx,
+    } as const;
+    const next = reducer(state, { type: E.AUTH_CHANGED, session: newerSession });
+    expect(next.status).toBe(S.AUTH_READY);
+    expect(next.context).toBe(ctx);
+    expect(next.session).toBe(newerSession);
+  });
+
   // --- AUTHENTICATING state ---
   it("SIGNED_OUT + AUTH_INITIATED → AUTHENTICATING", () => {
     const next = reducer(

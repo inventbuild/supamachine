@@ -1,6 +1,6 @@
 {
   "name": "@inventbuild/supamachine",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Deterministic auth state machine for Supabase apps",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -13,8 +13,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "flowchart": "npx tsx scripts/generate-flowchart.ts",
-    "prepublishOnly": "npm run build",
-    "publish": "npm run build && npm test && npm publish --access public"
+    "publishPublic": "npm run build && npm test && npm publish --access public"
   },
   "peerDependencies": {
     "@supabase/supabase-js": "^2.0.0",

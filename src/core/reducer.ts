@@ -179,7 +179,8 @@ export function reducer<C>(
           }
           break;
         case AuthEventType.AUTH_INITIATED:
-          next = { status: AuthStateStatus.AUTHENTICATING, context: NO_CONTEXT };
+          // Invalid: already signed in; only SIGNED_OUT / error states accept AUTH_INITIATED
+          next = state as CoreState<C>;
           break;
         default:
           return invalidTransition(state, event) as CoreState<C>;
