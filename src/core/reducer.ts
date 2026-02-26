@@ -1,3 +1,4 @@
+import type { Session } from "@supabase/supabase-js";
 import type { CoreState } from "./states";
 import type { AuthEvent } from "./events";
 import { AuthStateStatus, AuthEventType } from "./constants";
@@ -11,6 +12,12 @@ export function setReducerLogLevel(level: LogLevel) {
 
 /** Pre-context states use null; avoids TS inferring C = null from literal */
 const NO_CONTEXT = null;
+
+/** True if both sessions refer to the same user (or both null). Used to ignore redundant AUTH_CHANGED (e.g. TOKEN_REFRESHED) that would restart CONTEXT_LOADING/INITIALIZING. */
+function sameSessionUser(a: Session | null, b: Session | null): boolean {
+  if (!a || !b) return a === b;
+  return a.user?.id === b.user?.id;
+}
 
 function invalidTransition<C>(
   state: CoreState<C>,
@@ -103,6 +110,9 @@ export function reducer<C>(
         case AuthEventType.AUTH_CHANGED:
           if (!event.session) {
             next = { status: AuthStateStatus.SIGNED_OUT, context: NO_CONTEXT };
+          } else if (sameSessionUser(event.session, state.session)) {
+            // Same user (e.g. TOKEN_REFRESHED): don't restart pipeline
+            next = state as CoreState<C>;
           } else {
             next = {
               status: AuthStateStatus.CONTEXT_LOADING,
@@ -136,6 +146,9 @@ export function reducer<C>(
         case AuthEventType.AUTH_CHANGED:
           if (!event.session) {
             next = { status: AuthStateStatus.SIGNED_OUT, context: NO_CONTEXT };
+          } else if (sameSessionUser(event.session, state.session)) {
+            // Same user (e.g. TOKEN_REFRESHED): don't restart pipeline
+            next = state as CoreState<C>;
           } else {
             next = {
               status: AuthStateStatus.CONTEXT_LOADING,
@@ -154,6 +167,9 @@ export function reducer<C>(
         case AuthEventType.AUTH_CHANGED:
           if (!event.session) {
             next = { status: AuthStateStatus.SIGNED_OUT, context: NO_CONTEXT };
+          } else if (sameSessionUser(event.session, state.session)) {
+            // Same user (e.g. TOKEN_REFRESHED): update session in place, don't restart pipeline
+            next = { ...state, session: event.session };
           } else {
             next = {
               status: AuthStateStatus.CONTEXT_LOADING,

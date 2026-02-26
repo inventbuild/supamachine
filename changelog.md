@@ -1,3 +1,7 @@
+# v0.4.0
+
+- Improve reducer to ignore AUTH_CHANGED events where the user and session are identical. This prevents re-running the entire pipeline unnecessarily.
+
 # v0.3.3
 
 - Added `refreshContext()` method: re-runs `loadContext()` and replaces `session` and `context` while staying in the `AUTH_READY` state. `mapState()` is then triggered.
@@ -14,4 +18,4 @@
 
 # v0.3.0
 
-- Initial publiic version
+- Initial public version

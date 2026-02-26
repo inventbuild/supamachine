@@ -26,7 +26,7 @@ const {
 
 **THERE'S GOT TO BE A BETTER WAY!**
 
-Supamachine models auth as an explicit state machine with clear states (CHECKING, SIGNED_OUT, CONTEXT_LOADING, INITIALIZING, AUTH_READY, plus error states) and allows you to derive custom app states via `mapState`.
+Supamachine models auth as an explicit state machine with clear states (CHECKING_SESSION, AUTHENTICATING, SIGNED_OUT, CONTEXT_LOADING, INITIALIZING, AUTH_READY, plus error states) and allows you to derive custom app states via `mapState`.
 
 ## Real-World Benefits
 
@@ -93,7 +93,7 @@ function App() {
 - **initializeApp({ session, context })** – Optional. Side effects after context is loaded (e.g. set avatar)
 - **mapState(snapshot)** – Optional. Maps the internal AUTH_READY state to your custom app states
 - **actions** – Optional. Auth actions (signIn, signOut, etc.) to expose via `useSupamachine()`. Merged with a default `signOut` so you always have `actions.signOut()` available.
-- **options** – Optional. `logLevel`, `getSessionTimeoutMs`, `loadContextTimeoutMs`, `initializeAppTimeoutMs`
+- **options** – Optional. `logLevel`, `getSessionTimeoutMs`, `loadContextTimeoutMs`, `initializeAppTimeoutMs`, `authenticatingTimeoutMs`
 
 ### actions
 
@@ -134,6 +134,18 @@ updateContext((current) => ({
 
 `refreshContext(session)` re-runs `loadContext` with a new session, updates context and session in place, re-runs `mapState`, and emits—without leaving AUTH_READY. The adapter uses it automatically for `USER_UPDATED` so metadata changes (e.g. from `updateUser`) don't trigger a full reload. Exposed via `useSupamachine()` if you need to call it manually.
 
+### beginAuth / cancelAuth
+
+`beginAuth()` moves the machine into the AUTHENTICATING state for flows you control manually (for example, showing an up-front OAuth chooser or interstitial before Supabase kicks in). `cancelAuth()` lets you abandon a long-running or failed auth attempt and return to a safe state. Both are exposed via `useSupamachine()` and are mainly useful for advanced flows; most apps can rely on Supabase auth events alone.
+
 ## Philosophy
 
 Handling auth in your app is all about _states._ Supamachine explicitly defines every possible state (CHECKING_SESSION, SIGNED_OUT, CONTEXT_LOADING, INITIALIZING, AUTH_READY, plus error states) and lets you extend with custom states via `mapState`. By capturing all states and transitions, edge cases are handled deterministically.
+
+## More resources
+
+- `examples/react-simple.tsx` – minimal setup using `loadContext` and core states
+- `examples/react-custom.tsx` – custom app states derived via `mapState`
+- `examples/react-complex.tsx` – subscription-gated flow using `initializeApp`, `updateContext`, and `actions`
+- `STATE_MACHINE.md` – auto-generated state machine diagram and transition table
+- `changelog.md` – release notes for each published version
