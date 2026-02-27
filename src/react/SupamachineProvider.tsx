@@ -14,12 +14,20 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { SupamachineProviderProps, SupamachineActions } from "../core/types";
 import { parseLogLevel, LogLevel } from "../core/logger";
 
+/**
+ * Optional tuning for how Supamachine talks to Supabase.
+ *
+ * @remarks
+ * Most apps can rely on the defaults and skip these options.
+ */
 export type SupamachineOptions = {
   getSessionTimeoutMs?: number;
   loadContextTimeoutMs?: number;
   initializeAppTimeoutMs?: number;
   authenticatingTimeoutMs?: number;
-  /** 'none' | 'error' | 'warn' | 'info' | 'debug'. Default: 'warn'. Uses [Supamachine][subsystem] format. */
+  /**
+   * Verbosity of internal logging. `'warn'` by default.
+   */
   logLevel?: "none" | "error" | "warn" | "info" | "debug";
 };
 
@@ -54,6 +62,13 @@ const SupamachineContext = createContext<SupamachineContextValue<
   Record<string, (...args: any[]) => any>
 > | null>(null);
 
+/**
+ * React provider that connects Supamachine to your Supabase client.
+ *
+ * @typeParam C - Shape of your loaded auth context.
+ * @typeParam D - Custom app states created by your `mapState` function.
+ * @typeParam A - Additional auth actions exposed via `actions`.
+ */
 export function SupamachineProvider<
   C,
   D extends { status: string } | void = void,
@@ -154,6 +169,15 @@ export function SupamachineProvider<
   );
 }
 
+/**
+ * Hook for reading and controlling the Supamachine auth state.
+ *
+ * @typeParam C - Shape of your loaded auth context.
+ * @typeParam D - Custom app states created by your `mapState` function.
+ * @typeParam A - Additional auth actions exposed via `actions`.
+ *
+ * @throws If called outside of {@link SupamachineProvider}.
+ */
 export function useSupamachine<
   C,
   D extends { status: string } | void = void,

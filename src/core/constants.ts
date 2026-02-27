@@ -1,6 +1,9 @@
 /**
- * Core machine states. Use these when checking state or in mapState.
- * Distinct from AuthEventType (event types that drive transitions).
+ * Core machine states used by Supamachine.
+ *
+ * @remarks
+ * Use these values when branching in your UI or inside `mapState`.
+ * They are distinct from {@link AuthEventType}, which describes events.
  */
 export const AuthStateStatus = {
   START: "START",
@@ -17,11 +20,6 @@ export const AuthStateStatus = {
 
 export type AuthStateStatus =
   (typeof AuthStateStatus)[keyof typeof AuthStateStatus];
-
-/**
- * Internal event types that drive the state machine.
- * Mapped from Supabase auth events by the adapter.
- */
 export const AuthEventType = {
   START: "START",
   AUTH_CHANGED: "AUTH_CHANGED",

@@ -1,3 +1,9 @@
+/**
+ * React bindings and public types for Supamachine.
+ *
+ * @packageDocumentation
+ */
+
 export {
   SupamachineProvider,
   useSupamachine,

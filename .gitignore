@@ -3,5 +3,5 @@ node_modules/
 dist
 .env*
 *.zip
-docs/
+dev-docs/
 supabase/

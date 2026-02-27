@@ -12,6 +12,9 @@
     "dev": "tsc --watch",
     "test": "vitest run",
     "test:watch": "vitest",
+    "docs": "typedoc",
+    "docs:clean": "rm -rf docs",
+    "docs:build": "pnpm docs:clean && typedoc",
     "flowchart": "npx tsx scripts/generate-flowchart.ts",
     "publishPublic": "npm run build && npm test && npm publish --access public"
   },
@@ -24,6 +27,7 @@
     "@types/node": "^25.3.0",
     "@types/react": "^19.0.0",
     "prettier": "^3.8.1",
+    "typedoc": "^0.28.17",
     "typescript": "^5.0.0",
     "vitest": "^4.0.18"
   }

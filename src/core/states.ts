@@ -1,7 +1,6 @@
 import type { Session } from "@supabase/supabase-js";
 import { AuthStateStatus } from "./constants";
 
-/** context is always present: null before load, C once loaded */
 export type CoreState<C> =
   | { status: typeof AuthStateStatus.START; context: null }
   | { status: typeof AuthStateStatus.CHECKING_SESSION; context: null }
