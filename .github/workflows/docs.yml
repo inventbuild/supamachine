@@ -4,22 +4,27 @@ on:
   push:
     branches: [main]
 
-jobs:
-  build-and-deploy:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pages: write
-      id-token: write
+permissions:
+  contents: read
+  pages: write
+  id-token: write
 
+jobs:
+  build:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: pnpm/action-setup@v2
         with:
           version: 9
+
       - run: pnpm install
       - run: pnpm run docs
-      - uses: peaceiris/actions-gh-pages@v3
+
+      - uses: actions/configure-pages@v4
+      - uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs
+          path: ./docs
+
+      - uses: actions/deploy-pages@v4
